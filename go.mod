@@ -2,12 +2,14 @@ module github.com/blakerouse/ssh-mcp
 
 go 1.24.4
 
-require github.com/mark3labs/mcp-go v0.38.0
+require (
+	github.com/dgraph-io/badger/v4 v4.8.0
+	github.com/mark3labs/mcp-go v0.38.0
+)
 
 require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/dgraph-io/badger/v4 v4.8.0 // indirect
 	github.com/dgraph-io/ristretto/v2 v2.2.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
@@ -38,5 +40,5 @@ require (
 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
 	golang.org/x/crypto v0.41.0
 	golang.org/x/sys v0.35.0 // indirect
-	gopkg.in/yaml.v3 v3.0.1
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

@@ -46,27 +46,45 @@ func TestNewClientInfo_InvalidScheme(t *testing.T) {
 	}
 }
 
-func TestNewClientInfo_MissingUserInfo(t *testing.T) {
+func TestNewClientInfo_NoUserInfo(t *testing.T) {
 	connStr := "ssh://host:22"
-	_, err := NewClientInfo("test", connStr)
-	if err == nil || err.Error() != "invalid SSH connection string: missing user info" {
-		t.Errorf("expected error for missing user info, got %v", err)
+	info, err := NewClientInfo("test", connStr)
+	if err != nil {
+		t.Fatalf("expected no error for missing user info (should use defaults), got %v", err)
+	}
+	if info.User != "" {
+		t.Errorf("expected empty user (to be filled by Connect), got '%s'", info.User)
+	}
+	if info.Pass != "" {
+		t.Errorf("expected empty password (will use SSH agent), got '%s'", info.Pass)
 	}
 }
 
-func TestNewClientInfo_MissingUsername(t *testing.T) {
-	connStr := "ssh://:pass@host:22"
-	_, err := NewClientInfo("test", connStr)
-	if err == nil || err.Error() != "invalid SSH connection string: missing username" {
-		t.Errorf("expected error for missing username, got %v", err)
+func TestNewClientInfo_UserOnly(t *testing.T) {
+	connStr := "ssh://myuser@host:22"
+	info, err := NewClientInfo("test", connStr)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if info.User != "myuser" {
+		t.Errorf("expected user 'myuser', got '%s'", info.User)
+	}
+	if info.Pass != "" {
+		t.Errorf("expected empty password (will use SSH agent), got '%s'", info.Pass)
 	}
 }
 
-func TestNewClientInfo_MissingPassword(t *testing.T) {
+func TestNewClientInfo_UserWithEmptyPassword(t *testing.T) {
 	connStr := "ssh://user:@host:22"
-	_, err := NewClientInfo("test", connStr)
-	if err == nil || err.Error() != "invalid SSH connection string: missing password" {
-		t.Errorf("expected error for missing password, got %v", err)
+	info, err := NewClientInfo("test", connStr)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if info.User != "user" {
+		t.Errorf("expected user 'user', got '%s'", info.User)
+	}
+	if info.Pass != "" {
+		t.Errorf("expected empty password, got '%s'", info.Pass)
 	}
 }
 

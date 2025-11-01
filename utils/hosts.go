@@ -1,4 +1,4 @@
-package tools
+package utils
 
 import (
 	"fmt"
@@ -14,8 +14,8 @@ type HostIdentifier struct {
 	Name  string
 }
 
-// parseHostIdentifiers parses host identifiers in the format "group:name"
-func parseHostIdentifiers(hostStrings []string) ([]HostIdentifier, error) {
+// ParseHostIdentifiers parses host identifiers in the format "group:name"
+func ParseHostIdentifiers(hostStrings []string) ([]HostIdentifier, error) {
 	identifiers := make([]HostIdentifier, 0, len(hostStrings))
 	for _, hostStr := range hostStrings {
 		parts := strings.SplitN(hostStr, ":", 2)
@@ -30,8 +30,8 @@ func parseHostIdentifiers(hostStrings []string) ([]HostIdentifier, error) {
 	return identifiers, nil
 }
 
-// getHostsFromStorage takes a list of host identifiers and finds the hosts for those identifiers
-func getHostsFromStorage(storageEngine *storage.Engine, identifiers []HostIdentifier) ([]ssh.ClientInfo, error) {
+// GetHostsFromStorage takes a list of host identifiers and finds the hosts for those identifiers
+func GetHostsFromStorage(storageEngine *storage.Engine, identifiers []HostIdentifier) ([]ssh.ClientInfo, error) {
 	hosts := make([]ssh.ClientInfo, 0, len(identifiers))
 	var notFound []string
 	for _, id := range identifiers {
@@ -48,8 +48,8 @@ func getHostsFromStorage(storageEngine *storage.Engine, identifiers []HostIdenti
 	return hosts, nil
 }
 
-// getHostsFromGroup gets all hosts from a specific group
-func getHostsFromGroup(storageEngine *storage.Engine, group string) ([]ssh.ClientInfo, error) {
+// GetHostsFromGroup gets all hosts from a specific group
+func GetHostsFromGroup(storageEngine *storage.Engine, group string) ([]ssh.ClientInfo, error) {
 	hosts, err := storageEngine.ListGroup(group)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get hosts from group %s: %w", group, err)

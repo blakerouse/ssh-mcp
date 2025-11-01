@@ -9,6 +9,7 @@ import (
 
 	"github.com/blakerouse/ssh-mcp/ssh"
 	"github.com/blakerouse/ssh-mcp/storage"
+	"github.com/blakerouse/ssh-mcp/utils"
 )
 
 func init() {
@@ -47,16 +48,16 @@ func (c *UpdateOSInfo) Handler(storageEngine *storage.Engine) server.ToolHandler
 		}
 
 		if group != "" {
-			found, err = getHostsFromGroup(storageEngine, group)
+			found, err = utils.GetHostsFromGroup(storageEngine, group)
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
 		} else if len(sshNameOfHosts) > 0 {
-			identifiers, err := parseHostIdentifiers(sshNameOfHosts)
+			identifiers, err := utils.ParseHostIdentifiers(sshNameOfHosts)
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
-			found, err = getHostsFromStorage(storageEngine, identifiers)
+			found, err = utils.GetHostsFromStorage(storageEngine, identifiers)
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
@@ -71,7 +72,7 @@ func (c *UpdateOSInfo) Handler(storageEngine *storage.Engine) server.ToolHandler
 		// from this point forward it is very much assuming linux
 		// this really should be improved to do more checks to see if this macOS or Windows
 
-		result := performTasksOnHosts(found, func(host ssh.ClientInfo, sshClient *ssh.Client) (string, error) {
+		result := utils.PerformTasksOnHosts(found, func(host ssh.ClientInfo, sshClient *ssh.Client) (string, error) {
 			osRelease, err := sshClient.Exec("cat /etc/os-release")
 			if err != nil {
 				return "", fmt.Errorf("failed to get output of /etc/os-release: %w", err)

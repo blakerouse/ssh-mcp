@@ -8,6 +8,7 @@ import (
 
 	"github.com/blakerouse/ssh-mcp/ssh"
 	"github.com/blakerouse/ssh-mcp/storage"
+	"github.com/blakerouse/ssh-mcp/utils"
 )
 
 func init() {
@@ -46,16 +47,16 @@ func (c *GetOSInfo) Handler(storageEngine *storage.Engine) server.ToolHandlerFun
 		}
 
 		if group != "" {
-			found, err = getHostsFromGroup(storageEngine, group)
+			found, err = utils.GetHostsFromGroup(storageEngine, group)
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
 		} else if len(sshNameOfHosts) > 0 {
-			identifiers, err := parseHostIdentifiers(sshNameOfHosts)
+			identifiers, err := utils.ParseHostIdentifiers(sshNameOfHosts)
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
-			found, err = getHostsFromStorage(storageEngine, identifiers)
+			found, err = utils.GetHostsFromStorage(storageEngine, identifiers)
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}

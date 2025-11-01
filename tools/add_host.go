@@ -22,17 +22,17 @@ type AddHost struct{}
 // Definition returns the mcp.Tool definition.
 func (c *AddHost) Definition() mcp.Tool {
 	return mcp.NewTool("add_host",
-		mcp.WithDescription("Adds a new host to the SSH configuration."),
+		mcp.WithDescription("Adds a new host to the SSH configuration. Username and password are optional in the connection string - if not provided, the current user and SSH agent will be used for authentication."),
 		mcp.WithString("group",
 			mcp.Required(),
 			mcp.Description("Group that the host belongs to"),
 		),
 		mcp.WithString("ssh_connection_string",
 			mcp.Required(),
-			mcp.Description("SSH connection string"),
+			mcp.Description("SSH connection string in format: ssh://[user[:password]@]host[:port]. Examples: ssh://server.com, ssh://user@server.com, ssh://user:pass@server.com:2222"),
 		),
 		mcp.WithString("name_of_host",
-			mcp.Description("Name of the host"),
+			mcp.Description("Name of the host (optional, defaults to hostname)"),
 		),
 	)
 }

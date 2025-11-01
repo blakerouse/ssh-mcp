@@ -9,6 +9,7 @@ import (
 
 	"github.com/blakerouse/ssh-mcp/ssh"
 	"github.com/blakerouse/ssh-mcp/storage"
+	"github.com/blakerouse/ssh-mcp/utils"
 )
 
 func init() {
@@ -52,16 +53,16 @@ func (c *PerformCommand) Handler(storageEngine *storage.Engine) server.ToolHandl
 		}
 
 		if group != "" {
-			found, err = getHostsFromGroup(storageEngine, group)
+			found, err = utils.GetHostsFromGroup(storageEngine, group)
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
 		} else if len(sshNameOfHosts) > 0 {
-			identifiers, err := parseHostIdentifiers(sshNameOfHosts)
+			identifiers, err := utils.ParseHostIdentifiers(sshNameOfHosts)
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
-			found, err = getHostsFromStorage(storageEngine, identifiers)
+			found, err = utils.GetHostsFromStorage(storageEngine, identifiers)
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
@@ -73,7 +74,7 @@ func (c *PerformCommand) Handler(storageEngine *storage.Engine) server.ToolHandl
 			return mcp.NewToolResultError("no matching hosts found"), nil
 		}
 
-		result := performTasksOnHosts(found, func(_ ssh.ClientInfo, sshClient *ssh.Client) (string, error) {
+		result := utils.PerformTasksOnHosts(found, func(_ ssh.ClientInfo, sshClient *ssh.Client) (string, error) {
 			// sudo is required to update and upgrade
 			output, err := sshClient.Exec(commandStr)
 			if err != nil {
