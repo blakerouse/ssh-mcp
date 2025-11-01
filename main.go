@@ -57,6 +57,7 @@ func run(cmd *cobra.Command) error {
 	if err != nil {
 		return fmt.Errorf("failed to create storage engine: %w", err)
 	}
+	defer storageEngine.Close()
 
 	s := server.NewMCPServer(
 		"SSH",

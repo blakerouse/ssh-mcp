@@ -1,18 +1,16 @@
 package storage
 
 import (
-	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/blakerouse/ssh-mcp/ssh"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/yaml.v3"
 )
 
-func tempFilePath(t *testing.T) string {
+func tempDBPath(t *testing.T) string {
 	dir := t.TempDir()
-	return filepath.Join(dir, "engine_test.yaml")
+	return filepath.Join(dir, "badger_test")
 }
 
 func dummyClientInfo(name string) ssh.ClientInfo {
@@ -25,33 +23,44 @@ func dummyClientInfo(name string) ssh.ClientInfo {
 	}
 }
 
-func TestNewEngine_FileNotExist(t *testing.T) {
-	path := tempFilePath(t)
+func TestNewEngine_DBNotExist(t *testing.T) {
+	path := tempDBPath(t)
 	e, err := NewEngine(path)
 	require.NoError(t, err)
 	require.NotNil(t, e)
-	require.Empty(t, e.hosts)
+	defer e.Close()
+
+	// Verify empty database
+	list, err := e.List()
+	require.NoError(t, err)
+	require.Empty(t, list)
 }
 
-func TestNewEngine_FileExists(t *testing.T) {
-	path := tempFilePath(t)
-	hosts := map[string]ssh.ClientInfo{
-		"host1": dummyClientInfo("host1"),
-	}
-	data, err := yaml.Marshal(hosts)
-	require.NoError(t, err)
-	err = os.WriteFile(path, data, 0644)
-	require.NoError(t, err)
+func TestNewEngine_DBExists(t *testing.T) {
+	path := tempDBPath(t)
 
-	e, err := NewEngine(path)
+	// Create and populate database
+	e1, err := NewEngine(path)
 	require.NoError(t, err)
-	require.Equal(t, hosts, e.hosts)
+	info := dummyClientInfo("host1")
+	require.NoError(t, e1.Set(info))
+	e1.Close()
+
+	// Reopen and verify data persists
+	e2, err := NewEngine(path)
+	require.NoError(t, err)
+	defer e2.Close()
+
+	got, ok := e2.Get("host1")
+	require.True(t, ok)
+	require.Equal(t, info, got)
 }
 
 func TestEngine_SetAndGet(t *testing.T) {
-	path := tempFilePath(t)
+	path := tempDBPath(t)
 	e, err := NewEngine(path)
 	require.NoError(t, err)
+	defer e.Close()
 
 	info := dummyClientInfo("host1")
 	err = e.Set(info)
@@ -63,18 +72,20 @@ func TestEngine_SetAndGet(t *testing.T) {
 }
 
 func TestEngine_Get_NotFound(t *testing.T) {
-	path := tempFilePath(t)
+	path := tempDBPath(t)
 	e, err := NewEngine(path)
 	require.NoError(t, err)
+	defer e.Close()
 
 	_, ok := e.Get("missing")
 	require.False(t, ok)
 }
 
 func TestEngine_Delete(t *testing.T) {
-	path := tempFilePath(t)
+	path := tempDBPath(t)
 	e, err := NewEngine(path)
 	require.NoError(t, err)
+	defer e.Close()
 
 	info := dummyClientInfo("host1")
 	require.NoError(t, e.Set(info))
@@ -87,9 +98,10 @@ func TestEngine_Delete(t *testing.T) {
 }
 
 func TestEngine_List(t *testing.T) {
-	path := tempFilePath(t)
+	path := tempDBPath(t)
 	e, err := NewEngine(path)
 	require.NoError(t, err)
+	defer e.Close()
 
 	info1 := dummyClientInfo("host1")
 	info2 := dummyClientInfo("host2")
@@ -103,23 +115,21 @@ func TestEngine_List(t *testing.T) {
 	require.Contains(t, list, info2)
 }
 
-func TestEngine_load_InvalidFile(t *testing.T) {
-	path := tempFilePath(t)
-	err := os.WriteFile(path, []byte("invalid_yaml: [:"), 0644)
-	require.NoError(t, err)
-
-	e := &Engine{path: path}
-	loadErr := e.load()
-	require.Error(t, loadErr)
+func TestEngine_InvalidPath(t *testing.T) {
+	// Test that opening a database at an invalid path fails
+	_, err := NewEngine("/dev/null/invalid/path")
+	require.Error(t, err)
 }
 
-func TestEngine_save_Error(t *testing.T) {
-	e := &Engine{
-		hosts: map[string]ssh.ClientInfo{
-			"host1": dummyClientInfo("host1"),
-		},
-		path: "/invalid/path/engine.yaml",
-	}
-	err := e.save()
-	require.Error(t, err)
+func TestEngine_Close(t *testing.T) {
+	path := tempDBPath(t)
+	e, err := NewEngine(path)
+	require.NoError(t, err)
+
+	err = e.Close()
+	require.NoError(t, err)
+
+	// Calling Close again should be safe
+	err = e.Close()
+	require.NoError(t, err)
 }
