@@ -9,6 +9,7 @@ import (
 
 	"github.com/blakerouse/ssh-mcp/ssh"
 	"github.com/blakerouse/ssh-mcp/storage"
+	"github.com/blakerouse/ssh-mcp/utils"
 )
 
 func init() {
@@ -22,7 +23,7 @@ type AddHost struct{}
 // Definition returns the mcp.Tool definition.
 func (c *AddHost) Definition() mcp.Tool {
 	return mcp.NewTool("add_host",
-		mcp.WithDescription("Adds a new host to the SSH configuration. Username and password are optional in the connection string - if not provided, the current user and SSH agent will be used for authentication."),
+		mcp.WithDescription("Adds a new Linux or Windows host to the SSH configuration with automatic OS detection. Username and password are optional in the connection string - if not provided, the current user and SSH agent will be used for authentication."),
 		mcp.WithString("group",
 			mcp.Required(),
 			mcp.Description("Group that the host belongs to"),
@@ -73,21 +74,15 @@ func (c *AddHost) Handler(storageEngine *storage.Engine) server.ToolHandlerFunc 
 		}
 		defer sshClient.Close()
 
-		// from this point forward it is very much assuming linux
-		// this really should be improved to do more checks to see if this macOS or Windows
-
-		osRelease, err := sshClient.Exec("cat /etc/os-release")
+		// Detect OS and gather system information (supports Linux and Windows)
+		osRelease, uname, err := utils.GatherOSInfo(sshClient)
 		if err != nil {
-			return mcp.NewToolResultError(fmt.Errorf("failed to get output of /etc/os-release: %w", err).Error()), nil
-		}
-		uname, err := sshClient.Exec("uname -a")
-		if err != nil {
-			return mcp.NewToolResultError(fmt.Errorf("failed to get output of uname -a: %w", err).Error()), nil
+			return mcp.NewToolResultError(fmt.Errorf("failed to gather OS information: %w", err).Error()), nil
 		}
 
 		// set the OS info and store it for usage later
-		clientInfo.OS.OSRelease = string(osRelease)
-		clientInfo.OS.Uname = string(uname)
+		clientInfo.OS.OSRelease = osRelease
+		clientInfo.OS.Uname = uname
 		err = storageEngine.Set(*clientInfo)
 		if err != nil {
 			return mcp.NewToolResultError(fmt.Errorf("failed to add host to storage: %w", err).Error()), nil

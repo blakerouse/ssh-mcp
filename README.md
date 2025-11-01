@@ -3,16 +3,17 @@ SSH MCP is an MCP server that runs locally on your host that provides the abilit
 
 ## Tools
 
-- **add_host** - Adds a new host to the SSH configuration. Username and password are optional in the connection string - if not provided, the current user and SSH agent will be used for authentication.
+- **add_host** - Adds a new Linux or Windows host to the SSH configuration with automatic OS detection. Username and password are optional in the connection string - if not provided, the current user and SSH agent will be used for authentication.
 - **remove_host** - Removes a host from the SSH configuration by group and name.
 - **get_groups** - Retrieves the list of all groups from the SSH configuration.
 - **get_hosts** - Retrieves the list of hosts from the SSH configuration. Can optionally filter by group.
-- **get_os_info** - Retrieves the cached operating system information from hosts. You can specify individual hosts or an entire group.
-- **update_os_info** - Updates the cached operating system information. You can specify individual hosts or an entire group.
+- **get_os_info** - Retrieves the cached operating system information for Linux and Windows hosts. You can specify individual hosts or an entire group.
+- **update_os_info** - Updates the cached operating system information for Linux and Windows hosts. You can specify individual hosts or an entire group.
 - **perform_command** - SSH into a remote machine and executes a command. You can specify individual hosts or an entire group.
 
 ## Features
 
+- **Cross-platform support** - Works with both Linux and Windows remote hosts with automatic OS detection
 - **Group-based organization** - Organize hosts into groups for easier management
 - **Multiple authentication methods** - Supports password, SSH agent, and SSH key files (~/.ssh/id_rsa, id_ed25519, etc.)
 - **Secure host verification** - Uses ~/.ssh/known_hosts for host key verification with automatic host addition
@@ -21,8 +22,8 @@ SSH MCP is an MCP server that runs locally on your host that provides the abilit
 
 ## Limitations
 
-- Remote hosts must be Linux-based (OS detection commands assume Linux)
 - SSH agent support is Unix-only (SSH_AUTH_SOCK) - password and key file authentication work on all platforms
+- Remote hosts can be Linux or Windows (automatic OS detection)
 
 
 ## How to Setup

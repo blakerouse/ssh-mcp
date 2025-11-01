@@ -23,7 +23,7 @@ type UpdateOSInfo struct{}
 // Definition returns the mcp.Tool definition.
 func (c *UpdateOSInfo) Definition() mcp.Tool {
 	return mcp.NewTool("update_os_info",
-		mcp.WithDescription("Updates the cached operating system information. You can specify individual hosts or an entire group."),
+		mcp.WithDescription("Updates the cached operating system information for Linux and Windows hosts. You can specify individual hosts or an entire group."),
 		mcp.WithString("group",
 			mcp.Description("Group name to update OS info for all hosts in that group (mutually exclusive with name_of_hosts)"),
 		),
@@ -69,22 +69,16 @@ func (c *UpdateOSInfo) Handler(storageEngine *storage.Engine) server.ToolHandler
 			return mcp.NewToolResultError("no matching hosts found"), nil
 		}
 
-		// from this point forward it is very much assuming linux
-		// this really should be improved to do more checks to see if this macOS or Windows
-
+		// Detect OS and gather system information (supports Linux and Windows)
 		result := utils.PerformTasksOnHosts(found, func(host ssh.ClientInfo, sshClient *ssh.Client) (string, error) {
-			osRelease, err := sshClient.Exec("cat /etc/os-release")
+			osRelease, uname, err := utils.GatherOSInfo(sshClient)
 			if err != nil {
-				return "", fmt.Errorf("failed to get output of /etc/os-release: %w", err)
-			}
-			uname, err := sshClient.Exec("uname -a")
-			if err != nil {
-				return "", fmt.Errorf("failed to get output of uname -a: %w", err)
+				return "", fmt.Errorf("failed to gather OS information: %w", err)
 			}
 
 			// set the OS info and store it for usage later
-			host.OS.OSRelease = string(osRelease)
-			host.OS.Uname = string(uname)
+			host.OS.OSRelease = osRelease
+			host.OS.Uname = uname
 			err = storageEngine.Set(host)
 			if err != nil {
 				return "", fmt.Errorf("failed to add host to storage: %w", err)

@@ -22,7 +22,7 @@ type GetOSInfo struct{}
 // Definition returns the mcp.Tool definition.
 func (c *GetOSInfo) Definition() mcp.Tool {
 	return mcp.NewTool("get_os_info",
-		mcp.WithDescription("Retrieves the operating system information. You can specify individual hosts or an entire group."),
+		mcp.WithDescription("Retrieves the cached operating system information for Linux and Windows hosts. You can specify individual hosts or an entire group."),
 		mcp.WithString("group",
 			mcp.Description("Group name to get OS info for all hosts in that group (mutually exclusive with name_of_hosts)"),
 		),
