@@ -103,3 +103,65 @@ func TestNewClientInfo_InvalidURL(t *testing.T) {
 		t.Errorf("expected error for invalid URL, got nil")
 	}
 }
+
+func TestNewClientInfo_WithoutScheme(t *testing.T) {
+	connStr := "user:pass@host:2222"
+	info, err := NewClientInfo("test", connStr)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if info.Host != "host" {
+		t.Errorf("expected host 'host', got '%s'", info.Host)
+	}
+	if info.Port != "2222" {
+		t.Errorf("expected port '2222', got '%s'", info.Port)
+	}
+	if info.User != "user" {
+		t.Errorf("expected user 'user', got '%s'", info.User)
+	}
+	if info.Pass != "pass" {
+		t.Errorf("expected pass 'pass', got '%s'", info.Pass)
+	}
+}
+
+func TestNewClientInfo_WithoutSchemeHostOnly(t *testing.T) {
+	connStr := "host"
+	info, err := NewClientInfo("test", connStr)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if info.Host != "host" {
+		t.Errorf("expected host 'host', got '%s'", info.Host)
+	}
+	if info.Port != "22" {
+		t.Errorf("expected default port '22', got '%s'", info.Port)
+	}
+}
+
+func TestNewClientInfo_WithoutSchemeWithPort(t *testing.T) {
+	connStr := "host:2222"
+	info, err := NewClientInfo("test", connStr)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if info.Host != "host" {
+		t.Errorf("expected host 'host', got '%s'", info.Host)
+	}
+	if info.Port != "2222" {
+		t.Errorf("expected port '2222', got '%s'", info.Port)
+	}
+}
+
+func TestNewClientInfo_WithoutSchemeUserAndHost(t *testing.T) {
+	connStr := "user@host"
+	info, err := NewClientInfo("test", connStr)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if info.Host != "host" {
+		t.Errorf("expected host 'host', got '%s'", info.Host)
+	}
+	if info.User != "user" {
+		t.Errorf("expected user 'user', got '%s'", info.User)
+	}
+}

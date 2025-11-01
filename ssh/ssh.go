@@ -36,12 +36,32 @@ type ClientInfo struct {
 
 // NewClientInfo returns client information from the connection string.
 func NewClientInfo(name string, connStr string) (*ClientInfo, error) {
-	sshURL, err := url.Parse(connStr)
+	// If no scheme is provided, prepend ssh://
+	// We need to check if it looks like a scheme (contains ://) or if the parser
+	// incorrectly interpreted a port as a scheme (e.g., "host:2222" parsed as scheme "host")
+	parsedURL, err := url.Parse(connStr)
 	if err != nil {
 		return nil, fmt.Errorf("invalid SSH connection string: %w", err)
 	}
-	if sshURL.Scheme != "ssh" {
-		return nil, errors.New("invalid SSH connection string: not ssh scheme")
+
+	// If there's a scheme but no "://" in the original string, it's likely a host:port
+	// that was misparsed (e.g., "host:2222" gets scheme="host", path="2222")
+	if parsedURL.Scheme != "" && parsedURL.Scheme != "ssh" {
+		// Check if the original string contains "://"
+		// If not, it's probably host:port or user:pass@host:port
+		if len(parsedURL.Scheme) > 0 && parsedURL.Host == "" {
+			// This is likely "host:port" misparsed as scheme:path
+			connStr = "ssh://" + connStr
+		} else {
+			return nil, errors.New("invalid SSH connection string: not ssh scheme")
+		}
+	} else if parsedURL.Scheme == "" {
+		connStr = "ssh://" + connStr
+	}
+
+	sshURL, err := url.Parse(connStr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid SSH connection string: %w", err)
 	}
 
 	// Username is optional - will default to current user if not provided

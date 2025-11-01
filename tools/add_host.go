@@ -29,7 +29,7 @@ func (c *AddHost) Definition() mcp.Tool {
 		),
 		mcp.WithString("ssh_connection_string",
 			mcp.Required(),
-			mcp.Description("SSH connection string in format: ssh://[user[:password]@]host[:port]. Examples: ssh://server.com, ssh://user@server.com, ssh://user:pass@server.com:2222"),
+			mcp.Description("SSH connection string in format: [user[:password]@]host[:port]. The 'ssh://' prefix is optional. Examples: server.com, user@server.com, user:pass@server.com:2222, ssh://user@server.com:2222"),
 		),
 		mcp.WithString("name_of_host",
 			mcp.Description("Name of the host (optional, defaults to hostname)"),
