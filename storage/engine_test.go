@@ -13,13 +13,14 @@ func tempDBPath(t *testing.T) string {
 	return filepath.Join(dir, "badger_test")
 }
 
-func dummyClientInfo(name string) ssh.ClientInfo {
+func dummyClientInfo(group, name string) ssh.ClientInfo {
 	return ssh.ClientInfo{
-		Name: name,
-		Host: "127.0.0.1",
-		Port: "22",
-		User: "testuser",
-		Pass: "testpass",
+		Name:  name,
+		Group: group,
+		Host:  "127.0.0.1",
+		Port:  "22",
+		User:  "testuser",
+		Pass:  "testpass",
 	}
 }
 
@@ -42,7 +43,7 @@ func TestNewEngine_DBExists(t *testing.T) {
 	// Create and populate database
 	e1, err := NewEngine(path)
 	require.NoError(t, err)
-	info := dummyClientInfo("host1")
+	info := dummyClientInfo("production", "host1")
 	require.NoError(t, e1.Set(info))
 	e1.Close()
 
@@ -51,7 +52,7 @@ func TestNewEngine_DBExists(t *testing.T) {
 	require.NoError(t, err)
 	defer e2.Close()
 
-	got, ok := e2.Get("host1")
+	got, ok := e2.Get("production", "host1")
 	require.True(t, ok)
 	require.Equal(t, info, got)
 }
@@ -62,11 +63,11 @@ func TestEngine_SetAndGet(t *testing.T) {
 	require.NoError(t, err)
 	defer e.Close()
 
-	info := dummyClientInfo("host1")
+	info := dummyClientInfo("staging", "host1")
 	err = e.Set(info)
 	require.NoError(t, err)
 
-	got, ok := e.Get("host1")
+	got, ok := e.Get("staging", "host1")
 	require.True(t, ok)
 	require.Equal(t, info, got)
 }
@@ -77,7 +78,7 @@ func TestEngine_Get_NotFound(t *testing.T) {
 	require.NoError(t, err)
 	defer e.Close()
 
-	_, ok := e.Get("missing")
+	_, ok := e.Get("production", "missing")
 	require.False(t, ok)
 }
 
@@ -87,13 +88,13 @@ func TestEngine_Delete(t *testing.T) {
 	require.NoError(t, err)
 	defer e.Close()
 
-	info := dummyClientInfo("host1")
+	info := dummyClientInfo("development", "host1")
 	require.NoError(t, e.Set(info))
 
-	err = e.Delete("host1")
+	err = e.Delete("development", "host1")
 	require.NoError(t, err)
 
-	_, ok := e.Get("host1")
+	_, ok := e.Get("development", "host1")
 	require.False(t, ok)
 }
 
@@ -103,8 +104,8 @@ func TestEngine_List(t *testing.T) {
 	require.NoError(t, err)
 	defer e.Close()
 
-	info1 := dummyClientInfo("host1")
-	info2 := dummyClientInfo("host2")
+	info1 := dummyClientInfo("production", "host1")
+	info2 := dummyClientInfo("staging", "host2")
 	require.NoError(t, e.Set(info1))
 	require.NoError(t, e.Set(info2))
 
@@ -132,4 +133,134 @@ func TestEngine_Close(t *testing.T) {
 	// Calling Close again should be safe
 	err = e.Close()
 	require.NoError(t, err)
+}
+
+func TestEngine_ListGroup(t *testing.T) {
+	path := tempDBPath(t)
+	e, err := NewEngine(path)
+	require.NoError(t, err)
+	defer e.Close()
+
+	// Add hosts to different groups
+	prodHost1 := dummyClientInfo("production", "host1")
+	prodHost2 := dummyClientInfo("production", "host2")
+	stagingHost := dummyClientInfo("staging", "host3")
+
+	require.NoError(t, e.Set(prodHost1))
+	require.NoError(t, e.Set(prodHost2))
+	require.NoError(t, e.Set(stagingHost))
+
+	// List production group
+	prodList, err := e.ListGroup("production")
+	require.NoError(t, err)
+	require.Len(t, prodList, 2)
+	require.Contains(t, prodList, prodHost1)
+	require.Contains(t, prodList, prodHost2)
+
+	// List staging group
+	stagingList, err := e.ListGroup("staging")
+	require.NoError(t, err)
+	require.Len(t, stagingList, 1)
+	require.Contains(t, stagingList, stagingHost)
+
+	// List non-existent group
+	emptyList, err := e.ListGroup("nonexistent")
+	require.NoError(t, err)
+	require.Empty(t, emptyList)
+}
+
+func TestEngine_ListGroups(t *testing.T) {
+	path := tempDBPath(t)
+	e, err := NewEngine(path)
+	require.NoError(t, err)
+	defer e.Close()
+
+	// Add hosts to different groups
+	require.NoError(t, e.Set(dummyClientInfo("production", "host1")))
+	require.NoError(t, e.Set(dummyClientInfo("production", "host2")))
+	require.NoError(t, e.Set(dummyClientInfo("staging", "host3")))
+	require.NoError(t, e.Set(dummyClientInfo("development", "host4")))
+
+	// List all groups
+	groups, err := e.ListGroups()
+	require.NoError(t, err)
+	require.Len(t, groups, 3)
+	require.Contains(t, groups, "production")
+	require.Contains(t, groups, "staging")
+	require.Contains(t, groups, "development")
+}
+
+func TestEngine_Set_EmptyGroup(t *testing.T) {
+	path := tempDBPath(t)
+	e, err := NewEngine(path)
+	require.NoError(t, err)
+	defer e.Close()
+
+	info := ssh.ClientInfo{
+		Name:  "host1",
+		Group: "", // Empty group
+		Host:  "127.0.0.1",
+		Port:  "22",
+		User:  "testuser",
+		Pass:  "testpass",
+	}
+
+	err = e.Set(info)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "group cannot be empty")
+}
+
+func TestEngine_Set_EmptyName(t *testing.T) {
+	path := tempDBPath(t)
+	e, err := NewEngine(path)
+	require.NoError(t, err)
+	defer e.Close()
+
+	info := ssh.ClientInfo{
+		Name:  "", // Empty name
+		Group: "production",
+		Host:  "127.0.0.1",
+		Port:  "22",
+		User:  "testuser",
+		Pass:  "testpass",
+	}
+
+	err = e.Set(info)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "name cannot be empty")
+}
+
+func TestEngine_GroupIsolation(t *testing.T) {
+	path := tempDBPath(t)
+	e, err := NewEngine(path)
+	require.NoError(t, err)
+	defer e.Close()
+
+	// Add hosts with same name but different groups
+	prodHost := dummyClientInfo("production", "server1")
+	stagingHost := dummyClientInfo("staging", "server1")
+
+	require.NoError(t, e.Set(prodHost))
+	require.NoError(t, e.Set(stagingHost))
+
+	// Verify they are stored separately
+	gotProd, ok := e.Get("production", "server1")
+	require.True(t, ok)
+	require.Equal(t, prodHost, gotProd)
+
+	gotStaging, ok := e.Get("staging", "server1")
+	require.True(t, ok)
+	require.Equal(t, stagingHost, gotStaging)
+
+	// Delete production host
+	require.NoError(t, e.Delete("production", "server1"))
+
+	// Verify staging host still exists
+	gotStaging, ok = e.Get("staging", "server1")
+	require.True(t, ok)
+	require.Equal(t, stagingHost, gotStaging)
+
+	// Verify production host is deleted
+	_, ok = e.Get("production", "server1")
+	require.False(t, ok)
 }

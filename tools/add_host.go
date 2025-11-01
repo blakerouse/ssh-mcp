@@ -23,6 +23,10 @@ type AddHost struct{}
 func (c *AddHost) Definition() mcp.Tool {
 	return mcp.NewTool("add_host",
 		mcp.WithDescription("Adds a new host to the SSH configuration."),
+		mcp.WithString("group",
+			mcp.Required(),
+			mcp.Description("Group that the host belongs to"),
+		),
 		mcp.WithString("ssh_connection_string",
 			mcp.Required(),
 			mcp.Description("SSH connection string"),
@@ -36,6 +40,16 @@ func (c *AddHost) Definition() mcp.Tool {
 // Handle is the function that is called when the tool is invoked.
 func (c *AddHost) Handler(storageEngine *storage.Engine) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		group, err := request.RequireString("group")
+		if err != nil {
+			return mcp.NewToolResultError(err.Error()), nil
+		}
+
+		// Validate that group is not empty
+		if group == "" {
+			return mcp.NewToolResultError("group cannot be empty"), nil
+		}
+
 		sshConnectionString, err := request.RequireString("ssh_connection_string")
 		if err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
@@ -46,6 +60,10 @@ func (c *AddHost) Handler(storageEngine *storage.Engine) server.ToolHandlerFunc 
 		if err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
 		}
+
+		// Set the group
+		clientInfo.Group = group
+
 		sshClient := ssh.NewClient(clientInfo)
 
 		// connect over ssh
@@ -75,6 +93,6 @@ func (c *AddHost) Handler(storageEngine *storage.Engine) server.ToolHandlerFunc 
 			return mcp.NewToolResultError(fmt.Errorf("failed to add host to storage: %w", err).Error()), nil
 		}
 
-		return mcp.NewToolResultText(fmt.Sprintf("successfully added %s", clientInfo.Name)), nil
+		return mcp.NewToolResultText(fmt.Sprintf("successfully added %s to group %s", clientInfo.Name, group)), nil
 	}
 }

@@ -3,20 +3,41 @@ package tools
 import (
 	"fmt"
 	"strings"
-	"sync"
 
 	"github.com/blakerouse/ssh-mcp/ssh"
 	"github.com/blakerouse/ssh-mcp/storage"
 )
 
-// getHostsFromStorage takes a list of names and finds the hosts for those names
-func getHostsFromStorage(storageEngine *storage.Engine, names []string) ([]ssh.ClientInfo, error) {
-	hosts := make([]ssh.ClientInfo, 0, len(names))
+// HostIdentifier represents a group and name pair
+type HostIdentifier struct {
+	Group string
+	Name  string
+}
+
+// parseHostIdentifiers parses host identifiers in the format "group:name"
+func parseHostIdentifiers(hostStrings []string) ([]HostIdentifier, error) {
+	identifiers := make([]HostIdentifier, 0, len(hostStrings))
+	for _, hostStr := range hostStrings {
+		parts := strings.SplitN(hostStr, ":", 2)
+		if len(parts) != 2 {
+			return nil, fmt.Errorf("invalid host identifier format '%s', expected 'group:name'", hostStr)
+		}
+		identifiers = append(identifiers, HostIdentifier{
+			Group: parts[0],
+			Name:  parts[1],
+		})
+	}
+	return identifiers, nil
+}
+
+// getHostsFromStorage takes a list of host identifiers and finds the hosts for those identifiers
+func getHostsFromStorage(storageEngine *storage.Engine, identifiers []HostIdentifier) ([]ssh.ClientInfo, error) {
+	hosts := make([]ssh.ClientInfo, 0, len(identifiers))
 	var notFound []string
-	for _, name := range names {
-		host, ok := storageEngine.Get(name)
+	for _, id := range identifiers {
+		host, ok := storageEngine.Get(id.Group, id.Name)
 		if !ok {
-			notFound = append(notFound, name)
+			notFound = append(notFound, fmt.Sprintf("%s:%s", id.Group, id.Name))
 			continue
 		}
 		hosts = append(hosts, host)
@@ -27,41 +48,14 @@ func getHostsFromStorage(storageEngine *storage.Engine, names []string) ([]ssh.C
 	return hosts, nil
 }
 
-// taskResult is a single result on that host
-type taskResult struct {
-	Host   string `json:"host"`
-	Result string `json:"result"`
-	Err    error  `json:"error"`
-}
-
-// performTasksOnHosts performs the task on all hosts in parallel
-func performTasksOnHosts(hosts []ssh.ClientInfo, task func(host ssh.ClientInfo, sshClient *ssh.Client) (string, error)) map[string]taskResult {
-	var wg sync.WaitGroup
-	wg.Add(len(hosts))
-
-	var resultsMx sync.Mutex
-	results := make(map[string]taskResult, len(hosts))
-
-	for _, host := range hosts {
-		go func(host ssh.ClientInfo) {
-			defer wg.Done()
-			sshClient := ssh.NewClient(&host)
-			err := sshClient.Connect()
-			if err != nil {
-				resultsMx.Lock()
-				results[host.Name] = taskResult{Host: host.Name, Err: err}
-				resultsMx.Unlock()
-				return
-			}
-			defer sshClient.Close()
-
-			result, err := task(host, sshClient)
-			resultsMx.Lock()
-			results[host.Name] = taskResult{Host: host.Name, Result: result, Err: err}
-			resultsMx.Unlock()
-		}(host)
+// getHostsFromGroup gets all hosts from a specific group
+func getHostsFromGroup(storageEngine *storage.Engine, group string) ([]ssh.ClientInfo, error) {
+	hosts, err := storageEngine.ListGroup(group)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get hosts from group %s: %w", group, err)
 	}
-	wg.Wait()
-
-	return results
+	if len(hosts) == 0 {
+		return nil, fmt.Errorf("no hosts found in group: %s", group)
+	}
+	return hosts, nil
 }

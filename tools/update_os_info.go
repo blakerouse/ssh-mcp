@@ -22,10 +22,12 @@ type UpdateOSInfo struct{}
 // Definition returns the mcp.Tool definition.
 func (c *UpdateOSInfo) Definition() mcp.Tool {
 	return mcp.NewTool("update_os_info",
-		mcp.WithDescription("Updates the cached operating system information."),
+		mcp.WithDescription("Updates the cached operating system information. You can specify individual hosts or an entire group."),
+		mcp.WithString("group",
+			mcp.Description("Group name to update OS info for all hosts in that group (mutually exclusive with name_of_hosts)"),
+		),
 		mcp.WithArray("name_of_hosts",
-			mcp.Required(),
-			mcp.Description("Name of the hosts"),
+			mcp.Description("Array of host identifiers in format 'group:name' (mutually exclusive with group)"),
 			mcp.WithStringItems(),
 		),
 	)
@@ -34,18 +36,34 @@ func (c *UpdateOSInfo) Definition() mcp.Tool {
 // Handle is the function that is called when the tool is invoked.
 func (c *UpdateOSInfo) Handler(storageEngine *storage.Engine) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		sshNameOfHosts, err := request.RequireStringSlice("name_of_hosts")
-		if err != nil {
-			return mcp.NewToolResultError(err.Error()), nil
-		}
-		if len(sshNameOfHosts) == 0 {
-			return mcp.NewToolResultError("no hosts provided"), nil
+		// Get hosts either by group or by individual host identifiers
+		var found []ssh.ClientInfo
+		var err error
+		group := request.GetString("group", "")
+		sshNameOfHosts := request.GetStringSlice("name_of_hosts", []string{})
+
+		if group != "" && len(sshNameOfHosts) > 0 {
+			return mcp.NewToolResultError("cannot specify both 'group' and 'name_of_hosts'"), nil
 		}
 
-		found, err := getHostsFromStorage(storageEngine, sshNameOfHosts)
-		if err != nil {
-			return mcp.NewToolResultError(err.Error()), nil
+		if group != "" {
+			found, err = getHostsFromGroup(storageEngine, group)
+			if err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
+		} else if len(sshNameOfHosts) > 0 {
+			identifiers, err := parseHostIdentifiers(sshNameOfHosts)
+			if err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
+			found, err = getHostsFromStorage(storageEngine, identifiers)
+			if err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
+		} else {
+			return mcp.NewToolResultError("must specify either 'group' or 'name_of_hosts'"), nil
 		}
+
 		if len(found) == 0 {
 			return mcp.NewToolResultError("no matching hosts found"), nil
 		}

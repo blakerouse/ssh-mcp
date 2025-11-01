@@ -19,11 +19,12 @@ type OSInfo struct {
 
 // ClientInfo stores the generate client information.
 type ClientInfo struct {
-	Name string `yaml:"name" json:"name" jsonschema_description:"The name of the client"`
-	Host string `yaml:"host" json:"host" jsonschema_description:"The host of the client"`
-	Port string `yaml:"port" json:"port" jsonschema_description:"The port of the client"`
-	User string `yaml:"user" json:"user" jsonschema_description:"The user of the client"`
-	Pass string `yaml:"pass" json:"pass" jsonschema_description:"The password of the client"`
+	Name  string `yaml:"name" json:"name" jsonschema_description:"The name of the client"`
+	Group string `yaml:"group" json:"group" jsonschema_description:"The group the client belongs to"`
+	Host  string `yaml:"host" json:"host" jsonschema_description:"The host of the client"`
+	Port  string `yaml:"port" json:"port" jsonschema_description:"The port of the client"`
+	User  string `yaml:"user" json:"user" jsonschema_description:"The user of the client"`
+	Pass  string `yaml:"pass" json:"pass" jsonschema_description:"The password of the client"`
 
 	OS OSInfo `yaml:"os" json:"os" jsonschema_description:"The operating system information"`
 }
