@@ -102,14 +102,14 @@ func (c *PerformCommand) Handler(ctx context.Context, storageEngine *storage.Eng
 		}
 
 		// Wait for command completion with 30 second timeout
-		return c.waitForCommandOrBackground(ctx, cmd.ID())
+		return c.waitForCommandOrBackground(reqCtx, cmd)
 	}
 }
 
 // waitForCommandOrBackground waits up to 30 seconds for a command to complete.
 // If it completes in time, returns the results. Otherwise, returns the command ID for background tracking.
 // If the context is cancelled, returns the command ID immediately.
-func (c *PerformCommand) waitForCommandOrBackground(ctx context.Context, commandID string) (*mcp.CallToolResult, error) {
+func (c *PerformCommand) waitForCommandOrBackground(ctx context.Context, cmd *commands.Command) (*mcp.CallToolResult, error) {
 	const timeout = 30
 	ticker := time.NewTicker(500 * time.Millisecond)
 	defer ticker.Stop()
@@ -118,12 +118,8 @@ func (c *PerformCommand) waitForCommandOrBackground(ctx context.Context, command
 	for {
 		select {
 		case <-ctx.Done():
-			return mcp.NewToolResultError("Server is shutting down"), nil
+			return mcp.NewToolResultError("request cancelled"), nil
 		case <-ticker.C:
-			cmd, err := c.commandRunner.GetCommand(commandID)
-			if err != nil {
-				return mcp.NewToolResultError(fmt.Sprintf("failed to get command status: %v", err)), nil
-			}
 			if cmd.Status() == commands.CommandStatusCompleted ||
 				cmd.Status() == commands.CommandStatusFailed ||
 				cmd.Status() == commands.CommandStatusCancelled ||
