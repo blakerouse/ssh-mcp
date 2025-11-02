@@ -63,6 +63,12 @@ func run(cmd *cobra.Command) error {
 	// Create runner for background command execution
 	commandRunner := commands.NewRunner()
 
+	// Cancel all running commands when context is cancelled
+	go func() {
+		<-ctx.Done()
+		commandRunner.CancelAllCommands()
+	}()
+
 	s := server.NewMCPServer(
 		"SSH",
 		"0.1.0",

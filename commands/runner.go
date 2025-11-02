@@ -17,9 +17,10 @@ type Runner struct {
 
 // NewRunner creates a new command runner
 func NewRunner() *Runner {
-	return &Runner{
+	r := &Runner{
 		commands: make(map[string]*Command),
 	}
+	return r
 }
 
 // CreateCommand creates a new command and returns it
@@ -84,4 +85,16 @@ func (r *Runner) ListCommands() []*Command {
 	}
 
 	return commands
+}
+
+// CancelAllCommands cancels all running commands
+func (r *Runner) CancelAllCommands() {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	for _, cmd := range r.commands {
+		if cmd.Status() == CommandStatusRunning {
+			_ = cmd.Cancel()
+		}
+	}
 }
