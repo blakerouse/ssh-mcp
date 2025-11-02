@@ -18,7 +18,7 @@ func TestGetHosts_AllHosts(t *testing.T) {
 	addTestHost(t, engine, "staging", "server2", "10.0.2.1")
 
 	tool := &GetHosts{}
-	handler := tool.Handler(engine)
+	handler := tool.Handler(context.Background(), engine)
 
 	// Request all hosts (no group filter)
 	request := mcp.CallToolRequest{
@@ -42,7 +42,7 @@ func TestGetHosts_FilterByGroup(t *testing.T) {
 	addTestHost(t, engine, "staging", "server3", "10.0.2.1")
 
 	tool := &GetHosts{}
-	handler := tool.Handler(engine)
+	handler := tool.Handler(context.Background(), engine)
 
 	// Request only production hosts
 	request := mcp.CallToolRequest{
@@ -62,7 +62,7 @@ func TestGetHosts_FilterByGroup(t *testing.T) {
 func TestGetHosts_EmptyStorage(t *testing.T) {
 	engine := setupTestStorage(t)
 	tool := &GetHosts{}
-	handler := tool.Handler(engine)
+	handler := tool.Handler(context.Background(), engine)
 
 	request := mcp.CallToolRequest{
 		Params: mcp.CallToolParams{
@@ -84,7 +84,7 @@ func TestGetHosts_NonexistentGroup(t *testing.T) {
 	addTestHost(t, engine, "production", "server1", "10.0.1.1")
 
 	tool := &GetHosts{}
-	handler := tool.Handler(engine)
+	handler := tool.Handler(context.Background(), engine)
 
 	// Request hosts from nonexistent group
 	request := mcp.CallToolRequest{

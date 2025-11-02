@@ -3,10 +3,12 @@ package tools
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 
+	"github.com/blakerouse/ssh-mcp/commands"
 	"github.com/blakerouse/ssh-mcp/ssh"
 	"github.com/blakerouse/ssh-mcp/storage"
 	"github.com/blakerouse/ssh-mcp/utils"
@@ -18,12 +20,19 @@ func init() {
 }
 
 // PerformCommand is a tool that executes a command on a remote machine.
-type PerformCommand struct{}
+type PerformCommand struct {
+	commandRunner *commands.Runner
+}
+
+// SetCommandRunner sets the command runner for background execution
+func (c *PerformCommand) SetCommandRunner(runner *commands.Runner) {
+	c.commandRunner = runner
+}
 
 // Definition returns the mcp.Tool definition.
 func (c *PerformCommand) Definition() mcp.Tool {
 	return mcp.NewTool("perform_command",
-		mcp.WithDescription("SSH into a remote machine and executes a command. You can specify individual hosts or an entire group."),
+		mcp.WithDescription("SSH into a remote machine and executes a command. You can specify individual hosts or an entire group. Commands that take longer than 30 seconds are automatically moved to background. Use background=true to run immediately in background."),
 		mcp.WithString("group",
 			mcp.Description("Group name to execute command on all hosts in that group (mutually exclusive with name_of_hosts)"),
 		),
@@ -32,12 +41,19 @@ func (c *PerformCommand) Definition() mcp.Tool {
 			mcp.WithStringItems(),
 		),
 		mcp.WithString("command", mcp.Required(), mcp.Description("The command to execute")),
+		mcp.WithBoolean("background",
+			mcp.Description("Run the command in the background immediately and return a command ID (default: false, waits up to 30s before auto-backgrounding)"),
+		),
 	)
 }
 
 // Handle is the function that is called when the tool is invoked.
-func (c *PerformCommand) Handler(storageEngine *storage.Engine) server.ToolHandlerFunc {
-	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func (c *PerformCommand) Handler(ctx context.Context, storageEngine *storage.Engine) server.ToolHandlerFunc {
+	return func(reqCtx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		if c.commandRunner == nil {
+			panic("command runner not available")
+		}
+
 		commandStr, err := request.RequireString("command")
 		if err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
@@ -47,7 +63,6 @@ func (c *PerformCommand) Handler(storageEngine *storage.Engine) server.ToolHandl
 		var found []ssh.ClientInfo
 		group := request.GetString("group", "")
 		sshNameOfHosts := request.GetStringSlice("name_of_hosts", []string{})
-
 		if group != "" && len(sshNameOfHosts) > 0 {
 			return mcp.NewToolResultError("cannot specify both 'group' and 'name_of_hosts'"), nil
 		}
@@ -74,15 +89,47 @@ func (c *PerformCommand) Handler(storageEngine *storage.Engine) server.ToolHandl
 			return mcp.NewToolResultError("no matching hosts found"), nil
 		}
 
-		result := utils.PerformTasksOnHosts(found, func(_ ssh.ClientInfo, sshClient *ssh.Client) (string, error) {
-			// sudo is required to update and upgrade
-			output, err := sshClient.Exec(commandStr)
-			if err != nil {
-				return "", fmt.Errorf("failed to execute command: %w", err)
-			}
-			return string(output), nil
-		})
+		// Create and start the command
+		cmd := c.commandRunner.CreateCommand(commandStr, found)
+		err = cmd.Start()
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("failed to start command: %v", err)), nil
+		}
 
-		return mcp.NewToolResultStructuredOnly(result), nil
+		// If background execution is requested, return immediately
+		if request.GetBool("background", false) {
+			return mcp.NewToolResultStructured(cmd.ToState(), fmt.Sprintf("Command started in background with ID: %s\nUse get_command_status tool to check progress.", cmd.ID())), nil
+		}
+
+		// Wait for command completion with 30 second timeout
+		return c.waitForCommandOrBackground(ctx, cmd.ID())
+	}
+}
+
+// waitForCommandOrBackground waits up to 30 seconds for a command to complete.
+// If it completes in time, returns the results. Otherwise, returns the command ID for background tracking.
+// If the context is cancelled, returns the command ID immediately.
+func (c *PerformCommand) waitForCommandOrBackground(ctx context.Context, commandID string) (*mcp.CallToolResult, error) {
+	const timeout = 30
+	ticker := time.NewTicker(500 * time.Millisecond)
+	defer ticker.Stop()
+
+	startTime := time.Now()
+	for {
+		select {
+		case <-ctx.Done():
+			return mcp.NewToolResultError("Server is shutting down"), nil
+		case <-ticker.C:
+			cmd, err := c.commandRunner.GetCommand(commandID)
+			if err != nil {
+				return mcp.NewToolResultError(fmt.Sprintf("failed to get command status: %v", err)), nil
+			}
+			if cmd.Status() == commands.CommandStatusCompleted ||
+				cmd.Status() == commands.CommandStatusFailed ||
+				cmd.Status() == commands.CommandStatusCancelled ||
+				time.Since(startTime) >= timeout*time.Second {
+				return mcp.NewToolResultStructuredOnly(cmd.ToState()), nil
+			}
+		}
 	}
 }

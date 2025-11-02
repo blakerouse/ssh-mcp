@@ -34,8 +34,8 @@ func (c *RemoveHost) Definition() mcp.Tool {
 }
 
 // Handle is the function that is called when the tool is invoked.
-func (c *RemoveHost) Handler(storageEngine *storage.Engine) server.ToolHandlerFunc {
-	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func (c *RemoveHost) Handler(ctx context.Context, storageEngine *storage.Engine) server.ToolHandlerFunc {
+	return func(reqCtx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		group, err := request.RequireString("group")
 		if err != nil {
 			return mcp.NewToolResultError(err.Error()), nil

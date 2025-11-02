@@ -31,8 +31,8 @@ func (c *GetHosts) Definition() mcp.Tool {
 }
 
 // Handle is the function that is called when the tool is invoked.
-func (c *GetHosts) Handler(storageEngine *storage.Engine) server.ToolHandlerFunc {
-	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func (c *GetHosts) Handler(ctx context.Context, storageEngine *storage.Engine) server.ToolHandlerFunc {
+	return func(reqCtx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		group := request.GetString("group", "")
 
 		var hosts []ssh.ClientInfo

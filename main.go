@@ -12,6 +12,7 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/spf13/cobra"
 
+	"github.com/blakerouse/ssh-mcp/commands"
 	"github.com/blakerouse/ssh-mcp/storage"
 	"github.com/blakerouse/ssh-mcp/tools"
 )
@@ -59,6 +60,9 @@ func run(cmd *cobra.Command) error {
 	}
 	defer storageEngine.Close()
 
+	// Create runner for background command execution
+	commandRunner := commands.NewRunner()
+
 	s := server.NewMCPServer(
 		"SSH",
 		"0.1.0",
@@ -67,7 +71,11 @@ func run(cmd *cobra.Command) error {
 	)
 
 	for _, tool := range tools.Registry.Tools() {
-		s.AddTool(tool.Definition(), tool.Handler(storageEngine))
+		// Set command runner for tools that support background execution
+		if commandRunnerAware, ok := tool.(tools.CommandRunnerAware); ok {
+			commandRunnerAware.SetCommandRunner(commandRunner)
+		}
+		s.AddTool(tool.Definition(), tool.Handler(ctx, storageEngine))
 	}
 
 	// start the stdio server

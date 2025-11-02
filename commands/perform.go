@@ -1,4 +1,4 @@
-package utils
+package commands
 
 import (
 	"sync"
@@ -6,20 +6,20 @@ import (
 	"github.com/blakerouse/ssh-mcp/ssh"
 )
 
-// TaskResult is a single result on that host
-type TaskResult struct {
+// CommandResult is a single result on that host
+type CommandResult struct {
 	Host   string `json:"host"`
 	Result string `json:"result"`
 	Err    error  `json:"error"`
 }
 
-// PerformTasksOnHosts performs the task on all hosts in parallel
-func PerformTasksOnHosts(hosts []ssh.ClientInfo, task func(host ssh.ClientInfo, sshClient *ssh.Client) (string, error)) map[string]TaskResult {
+// PerformOnHosts performs the command on all hosts in parallel
+func PerformOnHosts(hosts []ssh.ClientInfo, command func(host ssh.ClientInfo, sshClient *ssh.Client) (string, error)) map[string]CommandResult {
 	var wg sync.WaitGroup
 	wg.Add(len(hosts))
 
 	var resultsMx sync.Mutex
-	results := make(map[string]TaskResult, len(hosts))
+	results := make(map[string]CommandResult, len(hosts))
 
 	for _, host := range hosts {
 		go func(host ssh.ClientInfo) {
@@ -28,15 +28,15 @@ func PerformTasksOnHosts(hosts []ssh.ClientInfo, task func(host ssh.ClientInfo, 
 			err := sshClient.Connect()
 			if err != nil {
 				resultsMx.Lock()
-				results[host.Name] = TaskResult{Host: host.Name, Err: err}
+				results[host.Name] = CommandResult{Host: host.Name, Err: err}
 				resultsMx.Unlock()
 				return
 			}
 			defer sshClient.Close()
 
-			result, err := task(host, sshClient)
+			result, err := command(host, sshClient)
 			resultsMx.Lock()
-			results[host.Name] = TaskResult{Host: host.Name, Result: result, Err: err}
+			results[host.Name] = CommandResult{Host: host.Name, Result: result, Err: err}
 			resultsMx.Unlock()
 		}(host)
 	}

@@ -3,13 +3,21 @@ SSH MCP is an MCP server that runs locally on your host that provides the abilit
 
 ## Tools
 
+### Host Management
 - **add_host** - Adds a new Linux or Windows host to the SSH configuration with automatic OS detection. Username and password are optional in the connection string - if not provided, the current user and SSH agent will be used for authentication.
 - **remove_host** - Removes a host from the SSH configuration by group and name.
 - **get_groups** - Retrieves the list of all groups from the SSH configuration.
 - **get_hosts** - Retrieves the list of hosts from the SSH configuration. Can optionally filter by group.
 - **get_os_info** - Retrieves the cached operating system information for Linux and Windows hosts. You can specify individual hosts or an entire group.
 - **update_os_info** - Updates the cached operating system information for Linux and Windows hosts. You can specify individual hosts or an entire group.
-- **perform_command** - SSH into a remote machine and executes a command. You can specify individual hosts or an entire group.
+
+### Command Execution
+- **perform_command** - SSH into a remote machine and executes a command. You can specify individual hosts or an entire group. Commands that take longer than 30 seconds are automatically moved to background execution. Use background=true to run immediately in background.
+
+### Command Management
+- **get_command_status** - Retrieves the status and results of a background command by its command ID. If no ID is provided, returns the most recent command.
+- **list_commands** - Lists all background commands with their current status. Useful for tracking long-running commands.
+- **cancel_command** - Cancels a running background command by its command ID.
 
 ## Features
 
@@ -18,6 +26,7 @@ SSH MCP is an MCP server that runs locally on your host that provides the abilit
 - **Multiple authentication methods** - Supports password, SSH agent, and SSH key files (~/.ssh/id_rsa, id_ed25519, etc.)
 - **Secure host verification** - Uses ~/.ssh/known_hosts for host key verification with automatic host addition
 - **Concurrent execution** - Execute commands across multiple hosts simultaneously
+- **Automatic background execution** - Commands that take longer than 30 seconds are automatically moved to background, with command IDs returned for status tracking
 - **Persistent storage** - Uses BadgerDB for efficient local storage
 
 ## Limitations
@@ -107,6 +116,37 @@ check disk space on staging group
 Run a command on specific hosts:
 ```
 run "systemctl status nginx" on production:web01 and production:web02
+```
+
+Commands that complete within 30 seconds will return results immediately. Longer commands are automatically moved to background:
+```
+run "apt-get update && apt-get upgrade -y" on production group
+# If this takes >30s, you'll get a command ID to check later
+```
+
+Force a command to run in background immediately:
+```
+run "apt-get update && apt-get upgrade -y" on production group in the background
+```
+
+### Managing Background Commands
+
+Check the status of a background command:
+```
+show me the status of command abc-123-def
+show me the status of the last command
+```
+
+List all background commands:
+```
+list all background commands
+show me all running commands
+```
+
+Cancel a running command:
+```
+cancel command abc-123-def
+stop the running command abc-123-def
 ```
 
 ### Updating OS Information

@@ -1,4 +1,4 @@
-package utils
+package commands
 
 import (
 	"errors"
@@ -7,19 +7,19 @@ import (
 	"github.com/blakerouse/ssh-mcp/ssh"
 )
 
-func TestPerformTasksOnHosts_EmptyHosts(t *testing.T) {
+func TestPerformCommandsOnHosts_EmptyHosts(t *testing.T) {
 	hosts := []ssh.ClientInfo{}
-	taskCalled := false
+	commandCalled := false
 
-	task := func(host ssh.ClientInfo, sshClient *ssh.Client) (string, error) {
-		taskCalled = true
+	command := func(host ssh.ClientInfo, sshClient *ssh.Client) (string, error) {
+		commandCalled = true
 		return "test", nil
 	}
 
-	results := PerformTasksOnHosts(hosts, task)
+	results := PerformOnHosts(hosts, command)
 
-	if taskCalled {
-		t.Error("task should not be called for empty hosts list")
+	if commandCalled {
+		t.Error("command should not be called for empty hosts list")
 	}
 
 	if len(results) != 0 {
@@ -27,7 +27,7 @@ func TestPerformTasksOnHosts_EmptyHosts(t *testing.T) {
 	}
 }
 
-func TestPerformTasksOnHosts_SingleHost_ConnectionFailure(t *testing.T) {
+func TestPerformCommandsOnHosts_SingleHost_ConnectionFailure(t *testing.T) {
 	// Create a host that will fail to connect (invalid host)
 	hosts := []ssh.ClientInfo{
 		{
@@ -39,16 +39,16 @@ func TestPerformTasksOnHosts_SingleHost_ConnectionFailure(t *testing.T) {
 		},
 	}
 
-	taskCalled := false
-	task := func(host ssh.ClientInfo, sshClient *ssh.Client) (string, error) {
-		taskCalled = true
+	commandCalled := false
+	command := func(host ssh.ClientInfo, sshClient *ssh.Client) (string, error) {
+		commandCalled = true
 		return "should not reach here", nil
 	}
 
-	results := PerformTasksOnHosts(hosts, task)
+	results := PerformOnHosts(hosts, command)
 
-	if taskCalled {
-		t.Error("task should not be called when connection fails")
+	if commandCalled {
+		t.Error("command should not be called when connection fails")
 	}
 
 	if len(results) != 1 {
@@ -73,7 +73,7 @@ func TestPerformTasksOnHosts_SingleHost_ConnectionFailure(t *testing.T) {
 	}
 }
 
-func TestPerformTasksOnHosts_MultipleHosts_AllConnectionFailures(t *testing.T) {
+func TestPerformCommandsOnHosts_MultipleHosts_AllConnectionFailures(t *testing.T) {
 	hosts := []ssh.ClientInfo{
 		{
 			Name:  "host1",
@@ -98,11 +98,11 @@ func TestPerformTasksOnHosts_MultipleHosts_AllConnectionFailures(t *testing.T) {
 		},
 	}
 
-	task := func(host ssh.ClientInfo, sshClient *ssh.Client) (string, error) {
+	command := func(host ssh.ClientInfo, sshClient *ssh.Client) (string, error) {
 		return "should not reach here", nil
 	}
 
-	results := PerformTasksOnHosts(hosts, task)
+	results := PerformOnHosts(hosts, command)
 
 	if len(results) != 3 {
 		t.Fatalf("expected 3 results, got %d", len(results))
@@ -126,9 +126,9 @@ func TestPerformTasksOnHosts_MultipleHosts_AllConnectionFailures(t *testing.T) {
 	}
 }
 
-func TestTaskResult_Structure(t *testing.T) {
-	// Test that TaskResult has the expected fields
-	result := TaskResult{
+func TestCommandResult_Structure(t *testing.T) {
+	// Test that CommandResult has the expected fields
+	result := CommandResult{
 		Host:   "test-host",
 		Result: "test result",
 		Err:    errors.New("test error"),
@@ -151,8 +151,8 @@ func TestTaskResult_Structure(t *testing.T) {
 	}
 }
 
-func TestTaskResult_SuccessCase(t *testing.T) {
-	result := TaskResult{
+func TestCommandResult_SuccessCase(t *testing.T) {
+	result := CommandResult{
 		Host:   "successful-host",
 		Result: "operation completed",
 		Err:    nil,
@@ -171,7 +171,7 @@ func TestTaskResult_SuccessCase(t *testing.T) {
 	}
 }
 
-func TestPerformTasksOnHosts_ResultsMapKeys(t *testing.T) {
+func TestPerformCommandsOnHosts_ResultsMapKeys(t *testing.T) {
 	// Verify that results are keyed by host name
 	hosts := []ssh.ClientInfo{
 		{
@@ -188,11 +188,11 @@ func TestPerformTasksOnHosts_ResultsMapKeys(t *testing.T) {
 		},
 	}
 
-	task := func(host ssh.ClientInfo, sshClient *ssh.Client) (string, error) {
+	command := func(host ssh.ClientInfo, sshClient *ssh.Client) (string, error) {
 		return "", nil
 	}
 
-	results := PerformTasksOnHosts(hosts, task)
+	results := PerformOnHosts(hosts, command)
 
 	// Check that results are keyed by the host names
 	if _, exists := results["alpha"]; !exists {
@@ -213,9 +213,9 @@ func TestPerformTasksOnHosts_ResultsMapKeys(t *testing.T) {
 	}
 }
 
-// TestPerformTasksOnHosts_Concurrency verifies that tasks run concurrently
+// TestPerformCommandsOnHosts_Concurrency verifies that tasks run concurrently
 // by checking that all hosts complete within a reasonable timeframe
-func TestPerformTasksOnHosts_Concurrency(t *testing.T) {
+func TestPerformCommandsOnHosts_Concurrency(t *testing.T) {
 	// Create multiple hosts that will all fail quickly
 	hosts := make([]ssh.ClientInfo, 5)
 	for i := 0; i < 5; i++ {
@@ -227,11 +227,11 @@ func TestPerformTasksOnHosts_Concurrency(t *testing.T) {
 		}
 	}
 
-	task := func(host ssh.ClientInfo, sshClient *ssh.Client) (string, error) {
+	command := func(host ssh.ClientInfo, sshClient *ssh.Client) (string, error) {
 		return "", nil
 	}
 
-	results := PerformTasksOnHosts(hosts, task)
+	results := PerformOnHosts(hosts, command)
 
 	// All 5 connection attempts should complete
 	if len(results) != 5 {

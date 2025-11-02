@@ -19,7 +19,7 @@ func TestGetOSInfo_ByGroup(t *testing.T) {
 	addTestHost(t, engine, "staging", "server3", "10.0.2.1")
 
 	tool := &GetOSInfo{}
-	handler := tool.Handler(engine)
+	handler := tool.Handler(context.Background(), engine)
 
 	// Request OS info for production group
 	request := mcp.CallToolRequest{
@@ -44,7 +44,7 @@ func TestGetOSInfo_ByHostIdentifiers(t *testing.T) {
 	addTestHost(t, engine, "staging", "server2", "10.0.2.1")
 
 	tool := &GetOSInfo{}
-	handler := tool.Handler(engine)
+	handler := tool.Handler(context.Background(), engine)
 
 	// Request OS info for specific hosts
 	request := mcp.CallToolRequest{
@@ -70,7 +70,7 @@ func TestGetOSInfo_MutuallyExclusiveParams(t *testing.T) {
 	addTestHost(t, engine, "production", "server1", "10.0.1.1")
 
 	tool := &GetOSInfo{}
-	handler := tool.Handler(engine)
+	handler := tool.Handler(context.Background(), engine)
 
 	// Try to specify both group and name_of_hosts
 	request := mcp.CallToolRequest{
@@ -95,7 +95,7 @@ func TestGetOSInfo_NoParams(t *testing.T) {
 	engine := setupTestStorage(t)
 
 	tool := &GetOSInfo{}
-	handler := tool.Handler(engine)
+	handler := tool.Handler(context.Background(), engine)
 
 	// Don't specify either parameter
 	request := mcp.CallToolRequest{
@@ -117,7 +117,7 @@ func TestGetOSInfo_NonexistentHost(t *testing.T) {
 	addTestHost(t, engine, "production", "server1", "10.0.1.1")
 
 	tool := &GetOSInfo{}
-	handler := tool.Handler(engine)
+	handler := tool.Handler(context.Background(), engine)
 
 	// Request OS info for non-existent host
 	request := mcp.CallToolRequest{
@@ -141,7 +141,7 @@ func TestGetOSInfo_InvalidHostIdentifierFormat(t *testing.T) {
 	engine := setupTestStorage(t)
 
 	tool := &GetOSInfo{}
-	handler := tool.Handler(engine)
+	handler := tool.Handler(context.Background(), engine)
 
 	// Use invalid format (missing group)
 	request := mcp.CallToolRequest{
@@ -167,7 +167,7 @@ func TestGetOSInfo_EmptyGroup(t *testing.T) {
 	addTestHost(t, engine, "production", "server1", "10.0.1.1")
 
 	tool := &GetOSInfo{}
-	handler := tool.Handler(engine)
+	handler := tool.Handler(context.Background(), engine)
 
 	// Request OS info for empty/nonexistent group
 	request := mcp.CallToolRequest{

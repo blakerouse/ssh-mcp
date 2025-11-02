@@ -13,7 +13,7 @@ import (
 func TestGetGroups_EmptyStorage(t *testing.T) {
 	engine := setupTestStorage(t)
 	tool := &GetGroups{}
-	handler := tool.Handler(engine)
+	handler := tool.Handler(context.Background(), engine)
 
 	request := mcp.CallToolRequest{}
 	result, err := handler(context.Background(), request)
@@ -34,7 +34,7 @@ func TestGetGroups_MultipleGroups(t *testing.T) {
 	addTestHost(t, engine, "development", "server4", "10.0.3.1")
 
 	tool := &GetGroups{}
-	handler := tool.Handler(engine)
+	handler := tool.Handler(context.Background(), engine)
 
 	request := mcp.CallToolRequest{}
 	result, err := handler(context.Background(), request)
@@ -56,7 +56,7 @@ func TestGetGroups_SingleGroup(t *testing.T) {
 	addTestHost(t, engine, "production", "server2", "10.0.1.2")
 
 	tool := &GetGroups{}
-	handler := tool.Handler(engine)
+	handler := tool.Handler(context.Background(), engine)
 
 	request := mcp.CallToolRequest{}
 	result, err := handler(context.Background(), request)

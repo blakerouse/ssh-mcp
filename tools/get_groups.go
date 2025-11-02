@@ -27,8 +27,8 @@ func (c *GetGroups) Definition() mcp.Tool {
 }
 
 // Handle is the function that is called when the tool is invoked.
-func (c *GetGroups) Handler(storageEngine *storage.Engine) server.ToolHandlerFunc {
-	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func (c *GetGroups) Handler(ctx context.Context, storageEngine *storage.Engine) server.ToolHandlerFunc {
+	return func(reqCtx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		groups, err := storageEngine.ListGroups()
 		if err != nil {
 			return mcp.NewToolResultError(fmt.Errorf("failed to list groups: %w", err).Error()), nil

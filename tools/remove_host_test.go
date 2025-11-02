@@ -17,7 +17,7 @@ func TestRemoveHost_Success(t *testing.T) {
 	addTestHost(t, engine, "production", "server1", "10.0.1.1")
 
 	tool := &RemoveHost{}
-	handler := tool.Handler(engine)
+	handler := tool.Handler(context.Background(), engine)
 
 	// Remove the host
 	request := mcp.CallToolRequest{
@@ -43,7 +43,7 @@ func TestRemoveHost_NonexistentHost(t *testing.T) {
 	engine := setupTestStorage(t)
 
 	tool := &RemoveHost{}
-	handler := tool.Handler(engine)
+	handler := tool.Handler(context.Background(), engine)
 
 	// Try to remove a host that doesn't exist
 	request := mcp.CallToolRequest{
@@ -66,7 +66,7 @@ func TestRemoveHost_EmptyGroup(t *testing.T) {
 	engine := setupTestStorage(t)
 
 	tool := &RemoveHost{}
-	handler := tool.Handler(engine)
+	handler := tool.Handler(context.Background(), engine)
 
 	// Try to remove with empty group
 	request := mcp.CallToolRequest{
@@ -89,7 +89,7 @@ func TestRemoveHost_EmptyName(t *testing.T) {
 	engine := setupTestStorage(t)
 
 	tool := &RemoveHost{}
-	handler := tool.Handler(engine)
+	handler := tool.Handler(context.Background(), engine)
 
 	// Try to remove with empty name
 	request := mcp.CallToolRequest{
@@ -112,7 +112,7 @@ func TestRemoveHost_MissingGroup(t *testing.T) {
 	engine := setupTestStorage(t)
 
 	tool := &RemoveHost{}
-	handler := tool.Handler(engine)
+	handler := tool.Handler(context.Background(), engine)
 
 	// Try to remove without specifying group
 	request := mcp.CallToolRequest{
@@ -134,7 +134,7 @@ func TestRemoveHost_MissingName(t *testing.T) {
 	engine := setupTestStorage(t)
 
 	tool := &RemoveHost{}
-	handler := tool.Handler(engine)
+	handler := tool.Handler(context.Background(), engine)
 
 	// Try to remove without specifying name
 	request := mcp.CallToolRequest{
@@ -160,7 +160,7 @@ func TestRemoveHost_GroupIsolation(t *testing.T) {
 	addTestHost(t, engine, "staging", "server1", "10.0.2.1")
 
 	tool := &RemoveHost{}
-	handler := tool.Handler(engine)
+	handler := tool.Handler(context.Background(), engine)
 
 	// Remove from production only
 	request := mcp.CallToolRequest{
@@ -195,7 +195,7 @@ func TestRemoveHost_MultipleRemoves(t *testing.T) {
 	addTestHost(t, engine, "production", "server3", "10.0.1.3")
 
 	tool := &RemoveHost{}
-	handler := tool.Handler(engine)
+	handler := tool.Handler(context.Background(), engine)
 
 	// Remove server1
 	request1 := mcp.CallToolRequest{

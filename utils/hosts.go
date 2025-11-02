@@ -10,8 +10,8 @@ import (
 
 // HostIdentifier represents a group and name pair
 type HostIdentifier struct {
-	Group string
-	Name  string
+	Group string `json:"group"`
+	Name  string `json:"name"`
 }
 
 // ParseHostIdentifiers parses host identifiers in the format "group:name"

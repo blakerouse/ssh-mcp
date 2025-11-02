@@ -34,8 +34,8 @@ func (c *GetOSInfo) Definition() mcp.Tool {
 }
 
 // Handle is the function that is called when the tool is invoked.
-func (c *GetOSInfo) Handler(storageEngine *storage.Engine) server.ToolHandlerFunc {
-	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func (c *GetOSInfo) Handler(ctx context.Context, storageEngine *storage.Engine) server.ToolHandlerFunc {
+	return func(reqCtx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		// Get hosts either by group or by individual host identifiers
 		var found []ssh.ClientInfo
 		var err error

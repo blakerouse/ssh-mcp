@@ -7,6 +7,7 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 
+	"github.com/blakerouse/ssh-mcp/commands"
 	"github.com/blakerouse/ssh-mcp/ssh"
 	"github.com/blakerouse/ssh-mcp/storage"
 	"github.com/blakerouse/ssh-mcp/utils"
@@ -35,8 +36,8 @@ func (c *UpdateOSInfo) Definition() mcp.Tool {
 }
 
 // Handle is the function that is called when the tool is invoked.
-func (c *UpdateOSInfo) Handler(storageEngine *storage.Engine) server.ToolHandlerFunc {
-	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func (c *UpdateOSInfo) Handler(ctx context.Context, storageEngine *storage.Engine) server.ToolHandlerFunc {
+	return func(reqCtx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		// Get hosts either by group or by individual host identifiers
 		var found []ssh.ClientInfo
 		var err error
@@ -70,7 +71,7 @@ func (c *UpdateOSInfo) Handler(storageEngine *storage.Engine) server.ToolHandler
 		}
 
 		// Detect OS and gather system information (supports Linux and Windows)
-		result := utils.PerformTasksOnHosts(found, func(host ssh.ClientInfo, sshClient *ssh.Client) (string, error) {
+		result := commands.PerformOnHosts(found, func(host ssh.ClientInfo, sshClient *ssh.Client) (string, error) {
 			osRelease, uname, err := utils.GatherOSInfo(sshClient)
 			if err != nil {
 				return "", fmt.Errorf("failed to gather OS information: %w", err)
