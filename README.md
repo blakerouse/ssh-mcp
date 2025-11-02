@@ -55,8 +55,7 @@ Update the MCP configuration for Claude Desktop:
 {
   "mcpServers": {
     "ssh": {
-      "command": "<PATH_TO_BUILT_BINARY>",
-      "args": ["--storage", "<PATH_TO_STORE_HOSTS>"]
+      "command": "<PATH_TO_BUILT_BINARY>"
     }
   }
 }

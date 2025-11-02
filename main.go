@@ -31,7 +31,7 @@ var rootCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.PersistentFlags().String("storage", "", "Storage path for hosts")
+	rootCmd.PersistentFlags().String("storage", "", "Storage path for hosts (default: ~/.ssh-mcp/storage.db)")
 }
 
 func main() {
@@ -48,7 +48,12 @@ func run(cmd *cobra.Command) error {
 
 	storagePath := cmd.Flag("storage").Value.String()
 	if storagePath == "" {
-		return errors.New("--storage is required")
+		// Default to ~/.ssh-mcp/storage.db
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			return fmt.Errorf("failed to get user home directory: %w", err)
+		}
+		storagePath = path.Join(homeDir, ".ssh-mcp", "storage.db")
 	}
 	err := os.MkdirAll(path.Dir(storagePath), 0700)
 	if err != nil {
