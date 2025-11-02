@@ -156,6 +156,14 @@ func (c *Client) Close() error {
 	return nil
 }
 
+// NewSession creates a new SSH session
+func (c *Client) NewSession() (*ssh.Session, error) {
+	if c.client == nil {
+		return nil, ErrNotConnected
+	}
+	return c.client.NewSession()
+}
+
 // Exec runs a command on the remote SSH server.
 func (c *Client) Exec(cmd string) ([]byte, error) {
 	session, err := c.client.NewSession()

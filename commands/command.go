@@ -3,12 +3,14 @@ package commands
 import (
 	"context"
 	"fmt"
+	"io"
 	"maps"
 	"sync"
 	"time"
 
 	"github.com/blakerouse/ssh-mcp/ssh"
 	"github.com/blakerouse/ssh-mcp/utils"
+	gossh "golang.org/x/crypto/ssh"
 )
 
 // CommandStatus represents the current state of a command
@@ -65,49 +67,77 @@ func (c *Command) Start() error {
 	c.startedAt = &now
 	c.mu.Unlock()
 
-	// Run the command in a goroutine
+	// Run the command on all hosts in parallel
 	go func() {
-		results := PerformOnHosts(c.hosts, func(host ssh.ClientInfo, sshClient *ssh.Client) (string, error) {
-			// Check if context is cancelled before executing
-			select {
-			case <-ctx.Done():
-				return "", fmt.Errorf("command cancelled")
-			default:
-			}
+		var wg sync.WaitGroup
+		wg.Add(len(c.hosts))
 
-			output, err := sshClient.Exec(c.command)
-			if err != nil {
-				return "", fmt.Errorf("failed to execute command: %w", err)
-			}
-			return string(output), nil
-		})
+		for _, host := range c.hosts {
+			go func(host ssh.ClientInfo) {
+				defer wg.Done()
 
+				// Check if context is cancelled before starting
+				select {
+				case <-ctx.Done():
+					c.mu.Lock()
+					c.results[host.Name] = CommandResult{
+						Host: host.Name,
+						Err:  fmt.Errorf("command cancelled"),
+					}
+					c.mu.Unlock()
+					return
+				default:
+				}
+
+				// Connect to the host
+				sshClient := ssh.NewClient(&host)
+				err := sshClient.Connect()
+				if err != nil {
+					c.mu.Lock()
+					c.results[host.Name] = CommandResult{
+						Host: host.Name,
+						Err:  fmt.Errorf("failed to connect: %w", err),
+					}
+					c.mu.Unlock()
+					return
+				}
+				defer sshClient.Close()
+
+				// Execute command with streaming output
+				c.executeWithStreaming(ctx, sshClient, host.Name)
+			}(host)
+		}
+
+		wg.Wait()
+
+		// Update final status
 		c.mu.Lock()
 		defer c.mu.Unlock()
 
-		c.results = results
 		now := time.Now()
 		c.endedAt = &now
 
+		// Check if command was cancelled
+		select {
+		case <-ctx.Done():
+			c.status = CommandStatusCancelled
+			return
+		default:
+		}
+
 		// Check if any results have errors
 		hasErrors := false
-		for _, result := range results {
+		for _, result := range c.results {
 			if result.Err != nil {
 				hasErrors = true
 				break
 			}
 		}
 
-		// Check if command was cancelled
-		select {
-		case <-ctx.Done():
-			c.status = CommandStatusCancelled
-		default:
-			if hasErrors {
-				c.status = CommandStatusFailed
-			} else {
-				c.status = CommandStatusCompleted
-			}
+		if hasErrors {
+			c.status = CommandStatusFailed
+		} else {
+			c.status = CommandStatusCompleted
 		}
 	}()
 
@@ -185,5 +215,135 @@ func (c *Command) ToState() *CommandState {
 		StartedAt: c.startedAt,
 		EndedAt:   c.endedAt,
 		Error:     errStr,
+	}
+}
+
+// executeWithStreaming executes a command with streaming stdout/stderr capture
+func (c *Command) executeWithStreaming(ctx context.Context, sshClient *ssh.Client, hostName string) {
+	// Create SSH session
+	session, err := sshClient.NewSession()
+	if err != nil {
+		c.mu.Lock()
+		c.results[hostName] = CommandResult{
+			Host: hostName,
+			Err:  fmt.Errorf("failed to create session: %w", err),
+		}
+		c.mu.Unlock()
+		return
+	}
+	defer session.Close()
+
+	// Create a pipe for stdout and stderr
+	stdout, err := session.StdoutPipe()
+	if err != nil {
+		c.mu.Lock()
+		c.results[hostName] = CommandResult{
+			Host: hostName,
+			Err:  fmt.Errorf("failed to create stdout pipe: %w", err),
+		}
+		c.mu.Unlock()
+		return
+	}
+
+	stderr, err := session.StderrPipe()
+	if err != nil {
+		c.mu.Lock()
+		c.results[hostName] = CommandResult{
+			Host: hostName,
+			Err:  fmt.Errorf("failed to create stderr pipe: %w", err),
+		}
+		c.mu.Unlock()
+		return
+	}
+
+	// Start the command
+	if err := session.Start(c.command); err != nil {
+		c.mu.Lock()
+		c.results[hostName] = CommandResult{
+			Host: hostName,
+			Err:  fmt.Errorf("failed to start command: %w", err),
+		}
+		c.mu.Unlock()
+		return
+	}
+
+	// Read output in real-time and update results
+	var output []byte
+	done := make(chan error, 1)
+
+	go func() {
+		// Read from stdout and stderr concurrently
+		var stdoutBuf, stderrBuf []byte
+		var bufMu sync.Mutex
+		var wg sync.WaitGroup
+		wg.Add(2)
+
+		// Helper function to read from a pipe and update the buffer
+		readPipe := func(pipe io.Reader, buf *[]byte) {
+			defer wg.Done()
+			readBuf := make([]byte, 4096)
+			for {
+				n, err := pipe.Read(readBuf)
+				if n > 0 {
+					bufMu.Lock()
+					*buf = append(*buf, readBuf[:n]...)
+					// Update the result with partial output
+					combined := string(append(stdoutBuf, stderrBuf...))
+					bufMu.Unlock()
+
+					c.mu.Lock()
+					if result, exists := c.results[hostName]; exists {
+						result.Result = combined
+						c.results[hostName] = result
+					} else {
+						c.results[hostName] = CommandResult{
+							Host:   hostName,
+							Result: combined,
+						}
+					}
+					c.mu.Unlock()
+				}
+				if err != nil {
+					break
+				}
+			}
+		}
+
+		go readPipe(stdout, &stdoutBuf)
+		go readPipe(stderr, &stderrBuf)
+
+		wg.Wait()
+		output = append(stdoutBuf, stderrBuf...)
+		done <- session.Wait()
+	}()
+
+	// Wait for command to complete or context to be cancelled
+	select {
+	case <-ctx.Done():
+		// Try to terminate the session gracefully
+		_ = session.Signal(gossh.SIGTERM)
+		session.Close()
+		c.mu.Lock()
+		c.results[hostName] = CommandResult{
+			Host:   hostName,
+			Result: string(output),
+			Err:    fmt.Errorf("command cancelled"),
+		}
+		c.mu.Unlock()
+	case err := <-done:
+		c.mu.Lock()
+		if err != nil {
+			c.results[hostName] = CommandResult{
+				Host:   hostName,
+				Result: string(output),
+				Err:    fmt.Errorf("command failed: %w", err),
+			}
+		} else {
+			c.results[hostName] = CommandResult{
+				Host:   hostName,
+				Result: string(output),
+			}
+		}
+		c.mu.Unlock()
 	}
 }
