@@ -68,6 +68,6 @@ func (c *GetOSInfo) Handler(ctx context.Context, storageEngine *storage.Engine) 
 			return mcp.NewToolResultError("no matching hosts found"), nil
 		}
 
-		return mcp.NewToolResultStructuredOnly(found), nil
+		return mcp.NewToolResultStructuredOnly(map[string]any{"hosts": found}), nil
 	}
 }

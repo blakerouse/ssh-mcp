@@ -54,6 +54,6 @@ func (c *GetHosts) Handler(ctx context.Context, storageEngine *storage.Engine) s
 		for _, host := range hosts {
 			list = append(list, fmt.Sprintf("%s:%s", host.Group, host.Name))
 		}
-		return mcp.NewToolResultStructured(hosts, strings.Join(list, ", ")), nil
+		return mcp.NewToolResultStructured(map[string]any{"hosts": hosts}, strings.Join(list, ", ")), nil
 	}
 }

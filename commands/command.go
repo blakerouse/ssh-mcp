@@ -41,15 +41,15 @@ type Command struct {
 
 // CommandState represents the serializable state of a Command
 type CommandState struct {
-	ID        string                         `json:"id"`
-	Status    CommandStatus                  `json:"status"`
-	Command   string                         `json:"command"`
-	Hosts     []utils.HostIdentifier         `json:"hosts"`
+	ID        string                   `json:"id"`
+	Status    CommandStatus            `json:"status"`
+	Command   string                   `json:"command"`
+	Hosts     []utils.HostIdentifier   `json:"hosts"`
 	Results   map[string]CommandResult `json:"results"`
-	CreatedAt time.Time                      `json:"created_at"`
-	StartedAt *time.Time                     `json:"started_at,omitempty"`
-	EndedAt   *time.Time                     `json:"ended_at,omitempty"`
-	Error     string                         `json:"error,omitempty"`
+	CreatedAt time.Time                `json:"created_at"`
+	StartedAt *time.Time               `json:"started_at,omitempty"`
+	EndedAt   *time.Time               `json:"ended_at,omitempty"`
+	Error     string                   `json:"error,omitempty"`
 }
 
 // CommandListItem represents a summary of a command for listing (without results)

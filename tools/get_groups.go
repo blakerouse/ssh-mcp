@@ -34,6 +34,6 @@ func (c *GetGroups) Handler(ctx context.Context, storageEngine *storage.Engine) 
 			return mcp.NewToolResultError(fmt.Errorf("failed to list groups: %w", err).Error()), nil
 		}
 
-		return mcp.NewToolResultStructured(groups, strings.Join(groups, ", ")), nil
+		return mcp.NewToolResultStructured(map[string]any{"groups": groups}, strings.Join(groups, ", ")), nil
 	}
 }

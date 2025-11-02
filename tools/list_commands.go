@@ -56,6 +56,6 @@ func (l *ListCommands) Handler(ctx context.Context, storageEngine *storage.Engin
 			return commandList[i].CreatedAt.After(commandList[j].CreatedAt)
 		})
 
-		return mcp.NewToolResultStructuredOnly(commandList), nil
+		return mcp.NewToolResultStructuredOnly(map[string]any{"commands": commandList}), nil
 	}
 }
