@@ -32,7 +32,7 @@ func (c *PerformCommand) SetCommandRunner(runner *commands.Runner) {
 // Definition returns the mcp.Tool definition.
 func (c *PerformCommand) Definition() mcp.Tool {
 	return mcp.NewTool("perform_command",
-		mcp.WithDescription("SSH into a remote machine and executes a command. You can specify individual hosts or an entire group. Commands that take longer than 30 seconds are automatically moved to background. Use background=true to run immediately in background."),
+		mcp.WithDescription("SSH into a remote machine and executes a command. You can specify individual hosts or an entire group. Commands that take longer than 30 seconds are automatically moved to background. Use background=true to run immediately in background. For background commands, use get_command_status to poll for progress and see partial output snapshots."),
 		mcp.WithString("group",
 			mcp.Description("Group name to execute command on all hosts in that group (mutually exclusive with name_of_hosts)"),
 		),

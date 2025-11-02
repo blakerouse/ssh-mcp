@@ -28,7 +28,7 @@ func (g *GetCommandStatus) SetCommandRunner(runner *commands.Runner) {
 // Definition returns the mcp.Tool definition.
 func (g *GetCommandStatus) Definition() mcp.Tool {
 	return mcp.NewTool("get_command_status",
-		mcp.WithDescription("Retrieves the status and results of a background command by its command ID. If no ID is provided, returns the most recent command."),
+		mcp.WithDescription("Retrieves the status and results of a background command by its command ID. For running commands, returns a snapshot of the partial output captured so far. Poll this repeatedly to monitor progress of long-running commands. If no ID is provided, returns the most recent command."),
 		mcp.WithString("command_id", mcp.Description("The command ID returned when starting a background command (optional - defaults to most recent command)")),
 	)
 }

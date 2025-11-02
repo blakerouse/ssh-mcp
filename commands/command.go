@@ -52,6 +52,17 @@ type CommandState struct {
 	Error     string                         `json:"error,omitempty"`
 }
 
+// CommandListItem represents a summary of a command for listing (without results)
+type CommandListItem struct {
+	ID        string                 `json:"id"`
+	Status    CommandStatus          `json:"status"`
+	Command   string                 `json:"command"`
+	Hosts     []utils.HostIdentifier `json:"hosts"`
+	CreatedAt time.Time              `json:"created_at"`
+	StartedAt *time.Time             `json:"started_at,omitempty"`
+	EndedAt   *time.Time             `json:"ended_at,omitempty"`
+}
+
 // Start starts executing the command in the background
 func (c *Command) Start() error {
 	c.mu.Lock()
@@ -179,6 +190,31 @@ func (c *Command) CreatedAt() time.Time {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.createdAt
+}
+
+// ToListItem returns a summary of the command without results (for listing)
+func (c *Command) ToListItem() *CommandListItem {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	// Convert hosts to simplified identifiers
+	hosts := make([]utils.HostIdentifier, len(c.hosts))
+	for i, h := range c.hosts {
+		hosts[i] = utils.HostIdentifier{
+			Group: h.Group,
+			Name:  h.Name,
+		}
+	}
+
+	return &CommandListItem{
+		ID:        c.id,
+		Status:    c.status,
+		Command:   c.command,
+		Hosts:     hosts,
+		CreatedAt: c.createdAt,
+		StartedAt: c.startedAt,
+		EndedAt:   c.endedAt,
+	}
 }
 
 // ToState returns a safe copy of the command state for serialization

@@ -29,7 +29,7 @@ func (l *ListCommands) SetCommandRunner(runner *commands.Runner) {
 // Definition returns the mcp.Tool definition.
 func (l *ListCommands) Definition() mcp.Tool {
 	return mcp.NewTool("list_commands",
-		mcp.WithDescription("Lists all background commands with their current status. Useful for tracking long-running commands."),
+		mcp.WithDescription("Lists all background commands with their current status (id, status, command, hosts, created_at, started_at, ended_at). Use get_command_status to see detailed results for a specific command."),
 	)
 }
 
@@ -45,17 +45,17 @@ func (l *ListCommands) Handler(ctx context.Context, storageEngine *storage.Engin
 			return mcp.NewToolResultText("No commands found"), nil
 		}
 
-		// Convert to JSON-safe copies
-		commandStates := make([]*commands.CommandState, len(allCommands))
+		// Convert to list items (without results)
+		commandList := make([]*commands.CommandListItem, len(allCommands))
 		for i, cmd := range allCommands {
-			commandStates[i] = cmd.ToState()
+			commandList[i] = cmd.ToListItem()
 		}
 
 		// Sort commands by creation time (newest first)
-		sort.Slice(commandStates, func(i, j int) bool {
-			return commandStates[i].CreatedAt.After(commandStates[j].CreatedAt)
+		sort.Slice(commandList, func(i, j int) bool {
+			return commandList[i].CreatedAt.After(commandList[j].CreatedAt)
 		})
 
-		return mcp.NewToolResultStructuredOnly(commandStates), nil
+		return mcp.NewToolResultStructuredOnly(commandList), nil
 	}
 }
