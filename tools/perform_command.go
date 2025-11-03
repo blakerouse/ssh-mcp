@@ -21,11 +21,11 @@ func init() {
 
 // PerformCommand is a tool that executes a command on a remote machine.
 type PerformCommand struct {
-	commandRunner *commands.Runner
+	commandRunner commands.Runner
 }
 
 // SetCommandRunner sets the command runner for background execution
-func (c *PerformCommand) SetCommandRunner(runner *commands.Runner) {
+func (c *PerformCommand) SetCommandRunner(runner commands.Runner) {
 	c.commandRunner = runner
 }
 

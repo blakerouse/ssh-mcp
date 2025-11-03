@@ -20,5 +20,5 @@ type CommandRunnerAware interface {
 	Tool
 
 	// SetCommandRunner sets the command runner for background execution.
-	SetCommandRunner(runner *commands.Runner)
+	SetCommandRunner(runner commands.Runner)
 }

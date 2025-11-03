@@ -18,11 +18,11 @@ func init() {
 
 // ListCommands is a tool that lists all background commands.
 type ListCommands struct {
-	commandRunner *commands.Runner
+	commandRunner commands.Runner
 }
 
 // SetCommandRunner sets the command runner
-func (l *ListCommands) SetCommandRunner(runner *commands.Runner) {
+func (l *ListCommands) SetCommandRunner(runner commands.Runner) {
 	l.commandRunner = runner
 }
 

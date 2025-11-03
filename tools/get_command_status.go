@@ -18,11 +18,11 @@ func init() {
 
 // GetCommandStatus is a tool that retrieves the status and results of a background command.
 type GetCommandStatus struct {
-	commandRunner *commands.Runner
+	commandRunner commands.Runner
 }
 
 // SetCommandRunner sets the command runner
-func (g *GetCommandStatus) SetCommandRunner(runner *commands.Runner) {
+func (g *GetCommandStatus) SetCommandRunner(runner commands.Runner) {
 	g.commandRunner = runner
 }
 

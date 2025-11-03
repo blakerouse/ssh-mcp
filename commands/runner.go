@@ -9,22 +9,31 @@ import (
 	"github.com/google/uuid"
 )
 
-// Runner manages background commands
-type Runner struct {
+// Runner is an interface for managing background commands
+type Runner interface {
+	CreateCommand(commandStr string, hosts []ssh.ClientInfo) *Command
+	GetCommand(commandID string) (*Command, error)
+	GetMostRecentCommand() (*Command, error)
+	ListCommands() []*Command
+	CancelAllCommands()
+}
+
+// runner is the implementation of Runner
+type runner struct {
 	commands map[string]*Command
 	mu       sync.RWMutex
 }
 
 // NewRunner creates a new command runner
-func NewRunner() *Runner {
-	r := &Runner{
+func NewRunner() Runner {
+	r := &runner{
 		commands: make(map[string]*Command),
 	}
 	return r
 }
 
 // CreateCommand creates a new command and returns it
-func (r *Runner) CreateCommand(commandStr string, hosts []ssh.ClientInfo) *Command {
+func (r *runner) CreateCommand(commandStr string, hosts []ssh.ClientInfo) *Command {
 	commandID := uuid.New().String()
 
 	cmd := &Command{
@@ -44,7 +53,7 @@ func (r *Runner) CreateCommand(commandStr string, hosts []ssh.ClientInfo) *Comma
 }
 
 // GetCommand retrieves a command by ID
-func (r *Runner) GetCommand(commandID string) (*Command, error) {
+func (r *runner) GetCommand(commandID string) (*Command, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -57,7 +66,7 @@ func (r *Runner) GetCommand(commandID string) (*Command, error) {
 }
 
 // GetMostRecentCommand returns the most recently created command
-func (r *Runner) GetMostRecentCommand() (*Command, error) {
+func (r *runner) GetMostRecentCommand() (*Command, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -75,7 +84,7 @@ func (r *Runner) GetMostRecentCommand() (*Command, error) {
 }
 
 // ListCommands returns all commands
-func (r *Runner) ListCommands() []*Command {
+func (r *runner) ListCommands() []*Command {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -88,7 +97,7 @@ func (r *Runner) ListCommands() []*Command {
 }
 
 // CancelAllCommands cancels all running commands
-func (r *Runner) CancelAllCommands() {
+func (r *runner) CancelAllCommands() {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 

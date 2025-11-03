@@ -18,11 +18,11 @@ func init() {
 
 // CancelCommand is a tool that cancels a running background command.
 type CancelCommand struct {
-	commandRunner *commands.Runner
+	commandRunner commands.Runner
 }
 
 // SetCommandRunner sets the command runner
-func (c *CancelCommand) SetCommandRunner(runner *commands.Runner) {
+func (c *CancelCommand) SetCommandRunner(runner commands.Runner) {
 	c.commandRunner = runner
 }
 
