@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"encoding/json"
 	"sync"
 
 	"github.com/blakerouse/ssh-mcp/ssh"
@@ -11,6 +12,23 @@ type CommandResult struct {
 	Host   string `json:"host"`
 	Result string `json:"result"`
 	Err    error  `json:"error"`
+}
+
+// MarshalJSON implements custom JSON marshaling to properly handle the error field
+func (cr CommandResult) MarshalJSON() ([]byte, error) {
+	var errStr string
+	if cr.Err != nil {
+		errStr = cr.Err.Error()
+	}
+	return json.Marshal(&struct {
+		Host   string `json:"host"`
+		Result string `json:"result"`
+		Error  string `json:"error,omitempty"`
+	}{
+		Host:   cr.Host,
+		Result: cr.Result,
+		Error:  errStr,
+	})
 }
 
 // PerformOnHosts performs the command on all hosts in parallel

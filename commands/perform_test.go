@@ -1,7 +1,9 @@
 package commands
 
 import (
+	"encoding/json"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/blakerouse/ssh-mcp/ssh"
@@ -243,5 +245,121 @@ func TestPerformCommandsOnHosts_Concurrency(t *testing.T) {
 		if result.Err == nil {
 			t.Errorf("expected error for host %s, got nil", key)
 		}
+	}
+}
+
+// TestCommandResult_MarshalJSON_WithError tests JSON marshaling when error is present
+func TestCommandResult_MarshalJSON_WithError(t *testing.T) {
+	result := CommandResult{
+		Host:   "test-host",
+		Result: "some output",
+		Err:    errors.New("connection failed"),
+	}
+
+	jsonData, err := json.Marshal(result)
+	if err != nil {
+		t.Fatalf("failed to marshal CommandResult: %v", err)
+	}
+
+	// Unmarshal to verify structure
+	var unmarshaled map[string]any
+	err = json.Unmarshal(jsonData, &unmarshaled)
+	if err != nil {
+		t.Fatalf("failed to unmarshal JSON: %v", err)
+	}
+
+	// Verify fields
+	if unmarshaled["host"] != "test-host" {
+		t.Errorf("expected host 'test-host', got '%v'", unmarshaled["host"])
+	}
+
+	if unmarshaled["result"] != "some output" {
+		t.Errorf("expected result 'some output', got '%v'", unmarshaled["result"])
+	}
+
+	if unmarshaled["error"] != "connection failed" {
+		t.Errorf("expected error 'connection failed', got '%v'", unmarshaled["error"])
+	}
+
+	// Verify the JSON string contains expected fields
+	jsonStr := string(jsonData)
+	expectedFields := []string{`"host":"test-host"`, `"result":"some output"`, `"error":"connection failed"`}
+	for _, field := range expectedFields {
+		if !strings.Contains(jsonStr, field) {
+			t.Errorf("expected JSON to contain %s, got: %s", field, jsonStr)
+		}
+	}
+}
+
+// TestCommandResult_MarshalJSON_WithoutError tests JSON marshaling when no error
+func TestCommandResult_MarshalJSON_WithoutError(t *testing.T) {
+	result := CommandResult{
+		Host:   "success-host",
+		Result: "command completed successfully",
+		Err:    nil,
+	}
+
+	jsonData, err := json.Marshal(result)
+	if err != nil {
+		t.Fatalf("failed to marshal CommandResult: %v", err)
+	}
+
+	// Unmarshal to verify structure
+	var unmarshaled map[string]any
+	err = json.Unmarshal(jsonData, &unmarshaled)
+	if err != nil {
+		t.Fatalf("failed to unmarshal JSON: %v", err)
+	}
+
+	// Verify fields
+	if unmarshaled["host"] != "success-host" {
+		t.Errorf("expected host 'success-host', got '%v'", unmarshaled["host"])
+	}
+
+	if unmarshaled["result"] != "command completed successfully" {
+		t.Errorf("expected result 'command completed successfully', got '%v'", unmarshaled["result"])
+	}
+
+	// Error field should be omitted when empty (omitempty)
+	if _, exists := unmarshaled["error"]; exists {
+		t.Errorf("expected error field to be omitted, but it exists with value: %v", unmarshaled["error"])
+	}
+
+	// Verify JSON string doesn't contain error field
+	jsonStr := string(jsonData)
+	if strings.Contains(jsonStr, "error") {
+		t.Errorf("expected JSON to not contain 'error' field when Err is nil, got: %s", jsonStr)
+	}
+}
+
+// TestCommandResult_MarshalJSON_EmptyResult tests JSON marshaling with empty result
+func TestCommandResult_MarshalJSON_EmptyResult(t *testing.T) {
+	result := CommandResult{
+		Host:   "empty-host",
+		Result: "",
+		Err:    errors.New("failed before output"),
+	}
+
+	jsonData, err := json.Marshal(result)
+	if err != nil {
+		t.Fatalf("failed to marshal CommandResult: %v", err)
+	}
+
+	var unmarshaled map[string]any
+	err = json.Unmarshal(jsonData, &unmarshaled)
+	if err != nil {
+		t.Fatalf("failed to unmarshal JSON: %v", err)
+	}
+
+	if unmarshaled["host"] != "empty-host" {
+		t.Errorf("expected host 'empty-host', got '%v'", unmarshaled["host"])
+	}
+
+	if unmarshaled["result"] != "" {
+		t.Errorf("expected empty result, got '%v'", unmarshaled["result"])
+	}
+
+	if unmarshaled["error"] != "failed before output" {
+		t.Errorf("expected error 'failed before output', got '%v'", unmarshaled["error"])
 	}
 }
