@@ -3,7 +3,7 @@ module github.com/blakerouse/ssh-mcp
 go 1.24.4
 
 require (
-	github.com/dgraph-io/badger/v4 v4.8.0
+	github.com/dgraph-io/badger/v4 v4.9.0
 	github.com/mark3labs/mcp-go v0.43.0
 )
 
