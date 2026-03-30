@@ -19,6 +19,10 @@ SSH MCP is an MCP server that runs locally on your host that provides the abilit
 - **list_commands** - Lists all background commands with their current status. Useful for tracking long-running commands.
 - **cancel_command** - Cancels a running background command by its command ID.
 
+## Hosted deployment
+
+A hosted deployment is available on [Fronteir AI](https://fronteir.ai/mcp/blakerouse-ssh-mcp).
+
 ## Features
 
 - **Cross-platform support** - Works with both Linux and Windows remote hosts with automatic OS detection
